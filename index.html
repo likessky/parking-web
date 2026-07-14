@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <!-- ============================================ -->
+  <!-- 🅿️ 우리 주차 위치 — 평촌푸르지오센트럴파크      -->
+  <!-- 희수·차미 주차 위치 공유 모바일 웹 앱           -->
+  <!-- ============================================ -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🅿️ 차미희수 주차위치</title>
+  <meta name="description" content="평촌푸르지오센트럴파크 지하주차장 주차 위치 실시간 공유">
+  <!-- 모바일 홈 화면 추가 시 네이티브 앱처럼 보이게 -->
+  <meta name="theme-color" content="#0f1923">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- 한글 폰트: Noto Sans KR -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+    /* ========================================== */
+    /* 1. CSS 변수 — 앱 전체 색상·폰트·크기 정의    */
+    /* ========================================== */
+    :root {
+      --bg-primary: #F8F6F0; /* 따뜻한 베이지/아이보리 배경 */
+      --bg-card: #FFFFFF;
+      --color-primary: #1A2B4C; /* 남색 (헤더 등) */
+      --color-accent: #FFB703; /* 노란색 (활성화 탭 등) */
+      
+      --color-heesoo: #4361EE; /* 희수 고유색 (단색 파랑) */
+      --color-chami: #2A9D8F; /* 차미 고유색 (단색 초록) */
+      
+      --color-normal: #F3F0FF;       
+      --color-compact: #E0F7FA;      
+      --color-ev: #E8F5E9;           
+      --color-road: transparent;     
+      --color-entrance: #FCE4EC;     
+      
+      --color-text: #2B2D42;         
+      --color-text-dim: #8D99AE;     
+      --color-border: #EAE5D9;
+      --color-slot-border: rgba(0, 0, 0, 0.05); 
+      
+      --font: 'Pretendard', 'Noto Sans KR', -apple-system, sans-serif;
+      --radius: 20px;
+      --radius-sm: 12px;
+      --radius-btn: 16px;
+      --transition: all 0.3s ease; 
+      
+      --shadow-soft: 0 4px 12px rgba(0,0,0,0.04);
+      --shadow-card: 0 8px 24px rgba(0,0,0,0.08);
+      --shadow-heavy: 0 16px 40px rgba(0,0,0,0.12);
+    }
+
+    /* ========================================== */
+    /* 2. 리셋 및 기본 스타일                       */
+    /* ========================================== */
+    *, *::before, *::after {
+      margin: 0; padding: 0; box-sizing: border-box;
+    }
+    html, body {
+      width: 100%; 
+      min-height: 100vh;
+      height: auto;
+      overflow: auto;
+      font-family: var(--font);
+      background: var(--bg-primary);
+      color: var(--color-text);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ========================================== */
+    /* 3. 화면(Screen) 공통                        */
+    /* ========================================== */
+    .screen {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: transparent;
+      z-index: 1; 
+      animation: fadeIn 0.4s ease;
+      padding-bottom: 40px;
+    }
+    .screen.hidden { display: none; }
+
+    /* ========================================== */
+    /* 4. 헤더                                     */
+    /* ========================================== */
+    .app-header {
+      background-color: var(--color-primary);
+      padding: 24px 40px;
+      text-align: left;
+      position: relative;
+      flex-shrink: 0;
+      color: #ffffff;
+      box-shadow: var(--shadow-soft);
+    }
+    .app-header h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 12px;
+      margin: 0;
+    }
+    .app-header h1 span { font-size: 28px; }
+    
+    .settings-btn {
+      position: absolute;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 50%;
+      width: 40px; height: 40px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: var(--transition);
+      color: #ffffff;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .settings-btn:hover { background: rgba(255,255,255,0.2); }
+
+    /* 히어로 배너 (Hero Banner) */
+    .hero-banner {
+      background: linear-gradient(to bottom, #A1C4FD 0%, #C2E9FB 100%);
+      padding: 30px 20px;
+      text-align: center;
+      color: #1A2B4C;
+      margin-bottom: -40px; /* 카드가 살짝 겹치도록 */
+      position: relative;
+      z-index: 0;
+      border-bottom-left-radius: 20px;
+      border-bottom-right-radius: 20px;
+    }
+    .hero-banner h2 {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .hero-banner p {
+      font-size: 14px;
+      opacity: 0.8;
+      font-weight: 500;
+    }
+
+    .detail-header {
+      position: relative;
+      padding: 20px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--color-border);
+      flex-shrink: 0;
+      z-index: 10;
+    }
+    .back-btn {
+      position: absolute;
+      left: 16px;
+      background: var(--bg-primary); border: 1px solid var(--color-border);
+      color: var(--color-text);
+      font-size: 14px; font-weight: 700; font-family: var(--font);
+      cursor: pointer;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .detail-header h2 {
+      font-size: 20px;
+      font-weight: 800;
+      text-align: center;
+      margin: 0; 
+      letter-spacing: -0.5px;
+    }
+
+    /* ========================================== */
+    /* 5. 메인 화면 — 좌우 분할 카드                 */
+    /* ========================================== */
+    .users-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      padding: 16px 20px;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      z-index: 2; /* 배너 위로 올라오도록 */
+    }
+    @media (min-width: 900px) {
+      .users-container { grid-template-columns: 1fr 1fr; margin-top: 20px; }
+    }
+    .user-card {
+      background: var(--bg-card); 
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+    .user-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-heavy); }
+    
+    .minimap-wrap {
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg-card);
+      border-radius: 0;
+      z-index: 1;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0.25; /* 배경으로 은은하게 */
+      border: none;
+    }
+    .user-info-wrap {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+      position: relative;
+      z-index: 5;
+      align-items: flex-end;
+      text-align: right;
+      justify-content: flex-end;
+      pointer-events: none;
+    }
+    .user-card .user-name {
+      font-size: 22px; font-weight: 800;
+      display: flex; flex-direction: row; align-items: center; gap: 8px; justify-content: flex-end;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+      color: var(--color-text);
+      background: rgba(255,255,255,0.8);
+      padding: 4px 12px;
+      border-radius: var(--radius-sm);
+    }
+    
+    .user-card .car-icon-display {
+      font-size: 28px;
+    }
+
+    .user-card .parking-info {
+      font-size: 24px;
+      font-weight: 800;
+      text-align: center;
+      line-height: 1.3;
+      margin-bottom: 8px;
+      color: var(--color-text);
+      min-height: 40px;
+      display: flex; align-items: center; justify-content: flex-end;
+      letter-spacing: -0.5px;
+      word-break: keep-all;
+      background: rgba(255,255,255,0.8);
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+    }
+    .user-card.heesoo .parking-info { color: var(--color-heesoo); }
+    .user-card.chami .parking-info { color: var(--color-chami); }
+
+    .user-card .parking-time {
+      font-size: 14px;
+      color: var(--color-text-dim);
+      margin-bottom: 16px;
+      font-weight: 600;
+      background: rgba(255,255,255,0.8);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .user-card .not-registered {
+      font-size: 20px;
+      color: var(--color-text-dim);
+      font-weight: 700;
+    }
+
+    /* ========================================== */
+    /* 6. 상세 화면 - 2단 레이아웃 (PC & Mobile)     */
+    /* ========================================== */
+    .detail-content {
+      display: flex;
+      flex-direction: column; 
+      flex: 1;
+      padding: 20px;
+      gap: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+    
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    @media (min-width: 1024px) {
+      .detail-content { flex-direction: row; }
+      .left-panel { flex: 8; min-height: 60vh; }
+      .right-panel { flex: 2.5; min-width: 320px; max-width: 380px; }
+    }
+
+    /* ========================================== */
+    /* 7. 층 선택 탭 (두 줄 래핑)                   */
+    /* ========================================== */
+    .floor-tabs {
+      display: flex;
+      flex-wrap: wrap; 
+      justify-content: center;
+      gap: 8px;
+      padding: 16px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .floor-tab {
+      flex: 1 1 calc(20% - 8px);
+      min-width: 50px;
+      padding: 10px 8px;
+      border: 1px solid var(--color-border);
+      border-radius: 24px;
+      background: var(--bg-card);
+      color: var(--color-text-dim);
+      font-family: var(--font);
+      font-size: 15px; font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: center;
+    }
+    .floor-tab.active { 
+      color: var(--color-primary); 
+      background: var(--color-accent);
+      border-color: var(--color-accent);
+      font-weight: 800;
+    }
+
+    /* ========================================== */
+    /* 8. 주차장 배치도                             */
+    /* ========================================== */
+    .map-container {
+      flex: 1;
+      padding: 10px; 
+      overflow: auto; 
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-card);
+    }
+    .parking-grid {
+      display: grid;
+      grid-template-columns: repeat(19, 1fr);
+      grid-template-rows: repeat(11, 1fr);
+      gap: 6px;
+      min-width: 900px; 
+      width: 100%;
+      max-width: 1200px;
+      aspect-ratio: 19 / 11;
+      background: transparent;
+      margin: 40px auto;
+      position: relative;
+    }
+
+    .zone {
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+    .zone-label {
+      position: absolute;
+      top: 6px; left: 10px;
+      font-size: 13px; font-weight: 800;
+      color: rgba(0,0,0,0.6);
+      z-index: 2;
+      pointer-events: none;
+      white-space: nowrap;
+      letter-spacing: -0.5px;
+    }
+    .zone-type-label {
+      position: absolute;
+      bottom: 4px; right: 8px;
+      font-size: 11px; font-weight: 800;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .zone-normal   { background: var(--color-normal); border: 1px solid var(--color-border); }
+    .zone-compact  { background: var(--color-compact); border: 1px solid #B2EBF2; }
+    .zone-compact .zone-type-label { color: #00838F; }
+    .zone-ev       { background: var(--color-ev); border: 1px solid #C8E6C9; }
+    .zone-ev .zone-type-label { color: #2E7D32; }
+    
+    .zone-road {
+      background: rgba(240,242,245,0.5); 
+      border: 1px dashed rgba(160,170,180,0.5);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      overflow: visible;
+    }
+    .zone-road .road-label {
+      font-size: 13px; color: #606F7B;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .zone-entrance {
+      background: var(--color-entrance);
+      border: 1px dashed rgba(233,30,99,0.3);
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 12px;
+    }
+    .zone-entrance .road-label {
+      font-size: 18px; color: #D81B60;
+      font-weight: 800;
+    }
+
+    .slots-row {
+      display: flex; flex: 1; width: 100%;
+    }
+    .slots-row.col-dir {
+      flex-direction: column; height: 100%;
+    }
+    .slot {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; min-height: 24px; font-size: 15px; font-weight: 800;
+      color: rgba(0,0,0,0.2); transition: var(--transition); position: relative;
+      background: rgba(255,255,255,0.9);
+    }
+    .slots-row:not(.col-dir) .slot:not(:first-child) { border-left: 1px solid var(--color-slot-border); }
+    .slots-row.col-dir .slot:not(:first-child) { border-top: 1px solid var(--color-slot-border); }
+    .slot:hover { background: #F8F9FA; }
+    .slot:active { background: #E9ECEF; }
+
+    .slot.selected {
+      background: var(--bg-card);
+      box-shadow: inset 0 0 0 3px var(--color-primary);
+      z-index: 5;
+    }
+    .slot.selected-heesoo { box-shadow: inset 0 0 0 3px var(--color-heesoo) !important; }
+    .slot.selected-chami { box-shadow: inset 0 0 0 3px var(--color-chami) !important; }
+
+    .slot.parked { position: relative; }
+    .slot .car-marker {
+      font-size: 28px; z-index: 3;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+    }
+    .slot.parked-heesoo { background: #EBF0FF !important; border: 2px solid var(--color-heesoo) !important; z-index: 2; }
+    .slot.parked-chami { background: #E6F7F5 !important; border: 2px solid var(--color-chami) !important; z-index: 2; }
+
+    /* ========================================== */
+    /* 9. 우측 조작 패널 (모바일 축소 적용)          */
+    /* ========================================== */
+    .register-section {
+      display: flex; flex-direction: column; gap: 12px;
+      background: var(--bg-card);
+      padding: 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-soft);
+    }
+    
+    .quick-btn {
+      width: 100%;
+      padding: 14px 16px; 
+      background: var(--bg-primary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      color: var(--color-text);
+      font-family: var(--font);
+      font-size: 15px; font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: left;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .quick-btn:hover { background: #F1EFEA; }
+    .quick-btn:active { transform: scale(0.98); }
+    .quick-btn .quick-icon { font-size: 20px; }
+    .quick-btn strong { font-size: 16px; font-weight: 800; color: var(--color-primary); }
+
+    .selection-info {
+      font-size: 14px;
+      color: var(--color-text-dim);
+      background: var(--bg-primary);
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      text-align: center;
+      transition: var(--transition);
+      border: 1px solid var(--color-border);
+    }
+    .selection-info strong {
+      color: var(--color-primary);
+      font-weight: 800;
+      font-size: 18px;
+      display: block;
+      margin-top: 4px;
+      letter-spacing: -0.5px;
+    }
+    
+    .register-btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: var(--radius-btn);
+      font-family: var(--font);
+      font-size: 18px; font-weight: 800;
+      cursor: pointer;
+      transition: var(--transition);
+      background: #E0E2E5;
+      color: #9AA0A6;
+    }
+    .register-btn.active.heesoo { background: var(--color-heesoo); color: #fff; box-shadow: 0 8px 16px rgba(67, 97, 238, 0.2); }
+    .register-btn.active.chami { background: var(--color-chami); color: #fff; box-shadow: 0 8px 16px rgba(42, 157, 143, 0.2); }
+    
+    .register-btn.active:hover { filter: brightness(1.05); transform: translateY(-2px); }
+    .register-btn.active:active { transform: translateY(0) scale(0.98); }
+
+    /* ========================================== */
+    /* 10. 최근 이력                                */
+    /* ========================================== */
+    .history-section {
+      flex: 1; display: flex; flex-direction: column;
+      background: var(--bg-card);
+      padding: 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-soft);
+    }
+    .history-section h3 {
+      font-size: 16px; font-weight: 800; margin-bottom: 12px;
+      color: var(--color-text); display: flex; align-items: center; gap: 8px;
+    }
+    .history-list {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .history-item {
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column; gap: 4px;
+      background: var(--bg-primary); 
+      border: 1px solid var(--color-border);
+    }
+    .history-item .hi-location { font-size: 16px; font-weight: 800; color: var(--color-text); letter-spacing: -0.5px;}
+    .history-item .hi-time { font-size: 12px; font-weight: 600; color: var(--color-text-dim); }
+
+    /* ========================================== */
+    /* 11. 아이콘 선택 모달                          */
+    /* ========================================== */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+      z-index: 100; display: flex; align-items: center; justify-content: center; transition: opacity 0.3s ease;
+    }
+    .modal-overlay.hidden { display: none; opacity: 0; pointer-events: none; }
+    
+    .modal-content {
+      background: var(--bg-card); border-radius: 24px; padding: 32px 24px;
+      width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto;
+      box-shadow: var(--shadow-heavy);
+    }
+    .modal-content h3 { font-size: 20px; font-weight: 800; text-align: center; margin-bottom: 24px; color: var(--color-text); }
+    .modal-user-section { margin-bottom: 24px; }
+    .modal-user-section h4 { font-size: 16px; font-weight: 800; margin-bottom: 12px; }
+    .modal-user-section h4.heesoo-title { color: var(--color-heesoo); }
+    .modal-user-section h4.chami-title  { color: var(--color-chami); }
+    .icon-options { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .icon-option {
+      width: 54px; height: 54px; border: 2px solid var(--color-border); border-radius: 50%;
+      background: var(--bg-primary); font-size: 28px; cursor: pointer; transition: var(--transition);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .icon-option.selected {
+      border-color: var(--color-primary); background: #EBF0FF;
+    }
+    .modal-close-btn {
+      width: 100%; padding: 14px; margin-top: 8px; background: var(--bg-primary); border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm); color: var(--color-text); font-family: var(--font);
+      font-size: 16px; font-weight: 800; cursor: pointer; transition: var(--transition);
+    }
+
+    /* ========================================== */
+    /* 12. 토스트 알림                              */
+    /* ========================================== */
+    #toast {
+      position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%) translateY(100px);
+      padding: 14px 24px; background: var(--color-primary); color: #fff; font-size: 14px; font-weight: 700; border-radius: 24px;
+      box-shadow: var(--shadow-card); z-index: 200; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      white-space: nowrap; max-width: 90%; text-align: center;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ========================================== */
+    /* 13. 애니메이션 및 미니맵                       */
+    /* ========================================== */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    
+    .minimap-wrap {
+      width: 100%;
+      height: 100%;
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .parking-grid.mini {
+      width: 100%;
+      height: 100%;
+      min-width: unset;
+      padding: 10px;
+      gap: 2px;
+      border-radius: 0;
+      box-shadow: none; 
+      background: transparent; 
+      margin: 0;
+      transform: none; 
+    }
+    .parking-grid.mini .zone { border-radius: 4px; overflow: visible; border-width: 1px; }
+    .parking-grid.mini .zone-label { font-size: 8px; top: 2px; left: 2px; font-weight: 800; color: #888; }
+    .parking-grid.mini .zone-type-label { display: none; }
+    .parking-grid.mini .slot {
+      min-height: 14px; 
+      font-size: 0;
+      overflow: visible;
+    }
+    .parking-grid.mini .slot:not(:first-child) { border-left-width: 1px; }
+    .parking-grid.mini .slots-row.col-dir .slot:not(:first-child) { border-top-width: 1px; }
+    .parking-grid.mini .slot .car-marker { 
+      font-size: 20px; 
+    }
+    .parking-grid.mini .road-label { font-size: 10px; }
+    
+    /* 줌 래퍼 — PC에서는 단순 컨테이너 역할 */
+    .map-zoom-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      transition: transform 0.1s ease-out;
+    }
+    .slot-text { display: inline-block; }
+
+    /* 동서남북 그리드 가장자리 텍스트 */
+    .grid-dir {
+      position: absolute;
+      font-size: 20px;
+      font-weight: 800;
+      color: #8D99AE;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .grid-dir-inner {
+      position: absolute;
+      font-size: 24px;
+      font-weight: 800;
+      color: #8D99AE;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .grid-dir.dir-n { top: -35px; left: 50%; transform: translateX(-50%); }
+    .grid-dir.dir-s { bottom: -35px; left: 50%; transform: translateX(-50%); }
+    .grid-dir.dir-e { right: -35px; top: 50%; transform: translateY(-50%); }
+    .grid-dir.dir-w { left: -35px; top: 50%; transform: translateY(-50%); }
+
+    /* ========================================== */
+    /* 📱 모바일 전용 최적화 (767px 이하)          */
+    /* ========================================== */
+    @media (max-width: 767px) {
+      .app-header { padding: 16px 20px; }
+      .app-header h1 { font-size: 18px; gap: 8px; }
+      .app-header h1 span { font-size: 20px; }
+      .settings-btn { width: 32px; height: 32px; font-size: 14px; right: 16px; }
+      
+      .hero-banner { padding: 20px 16px; margin-bottom: -20px; }
+      .hero-banner h2 { font-size: 16px; }
+      .hero-banner p { font-size: 12px; }
+
+      .screen { padding-bottom: 20px; min-height: 100dvh; }
+      .users-container { gap: 16px; padding: 16px; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      .user-card { padding: 20px; border-radius: 16px; flex-direction: column; gap: 0; min-height: 180px; justify-content: flex-end; }
+      
+      .minimap-wrap { opacity: 0.15; }
+      .parking-grid.mini { padding: 12px; }
+      
+      .user-info-wrap { justify-content: flex-end; align-items: flex-end; text-align: right; z-index: 5; }
+      .user-card .user-name { font-size: 18px; margin-bottom: 8px; gap: 6px; padding: 2px 10px; }
+      .user-card .car-icon-display { font-size: 24px; }
+      .user-card .parking-info { font-size: 20px; min-height: 30px; margin-bottom: 6px; padding: 6px 12px; }
+      .user-card .parking-time { font-size: 12px; margin-bottom: 0; padding: 2px 6px; }
+
+      .detail-header { padding: 14px 16px; justify-content: flex-start; gap: 12px; }
+      .back-btn { position: static; padding: 8px 12px; font-size: 13px; flex-shrink: 0; }
+      .detail-header h2 { font-size: 18px; margin-left: auto; text-align: right; }
+
+      .detail-content { padding: 16px; gap: 16px; }
+      .left-panel { border-radius: 16px; }
+
+      .floor-tabs { padding: 12px; gap: 6px; }
+      .floor-tab { padding: 8px 6px; font-size: 14px; }
+
+      .map-container { position: relative; overflow: hidden; flex: 1; min-height: 320px; touch-action: none; padding: 0; user-select: none; -webkit-user-select: none; background-color: var(--bg-card); }
+      
+      .map-zoom-wrapper { position: absolute; top: 50%; left: 50%; width: 900px; height: 521px; transform-origin: center center; touch-action: none; will-change: transform; }
+      .map-zoom-wrapper .parking-grid { min-width: 900px !important; width: 100%; height: 100%; }
+      .map-zoom-wrapper .zone-label, .map-zoom-wrapper .zone-type-label, .map-zoom-wrapper .road-label, .map-zoom-wrapper .slot-text { display: inline-block; transform: rotate(90deg) !important; }
+      .map-zoom-wrapper .car-marker { display: flex; flex-direction: column; align-items: center; transform: rotate(90deg) !important; gap: 2px; font-size: 24px !important; }
+      .map-zoom-wrapper .car-name { font-size: 14px; font-weight: 800; line-height: 1; color: var(--color-primary); text-shadow: 0 1px 2px rgba(255,255,255,0.8); }
+      .map-zoom-wrapper .grid-dir-inner { transform: rotate(90deg) !important; color: var(--color-text-dim) !important; }
+      .map-zoom-wrapper .zone { overflow: visible; }
+      .map-zoom-wrapper .slot { overflow: visible; font-size: 0; }
+      .map-zoom-wrapper .zone-label { font-size: 14px; color: #555; font-weight: 800; top: 2px; left: 4px; }
+      .map-zoom-wrapper .zone-type-label { font-size: 12px; color: #555; font-weight: 800; bottom: 2px; right: 4px; }
+      .map-zoom-wrapper .slot-text { font-size: 18px; color: rgba(0,0,0,0.3); font-weight: 800; }
+      .map-zoom-wrapper .road-label { font-size: 14px; }
+      .map-zoom-wrapper .zone-entrance .road-label { font-size: 24px; }
+      
+      .map-zoom-wrapper .slot.parked-heesoo { background: #EBF0FF !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important; border: 2px solid var(--color-heesoo); z-index: 10; transform: scale(1.05); }
+      .map-zoom-wrapper .slot.parked-chami { background: #E6F7F5 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important; border: 2px solid var(--color-chami); z-index: 10; transform: scale(1.05); }
+
+      .register-section { padding: 12px; gap: 8px; }
+      .right-panel { flex-direction: column; }
+      .quick-btn { height: 48px; font-size: 13px; justify-content: flex-start; padding: 0 12px; }
+      .quick-btn .quick-icon { display: inline-block; font-size: 16px; }
+      .selection-info { padding: 10px; font-size: 13px; }
+      .selection-info strong { font-size: 15px; }
+      .register-btn { padding: 14px; font-size: 16px; }
+      
+      .history-section { padding: 12px; margin-top: 0; }
+      .history-item { padding: 10px 12px; }
+      .history-item .hi-location { font-size: 14px; }
+      
+      /* --- 하단 조작 패널 축소 (1줄 배치) --- */
+      .quick-btn { flex: 1; padding: 0 4px; height: 44px; font-size: 11px; justify-content: center; text-align: center; flex-direction: column; gap: 2px; border-radius: 10px; }
+      .quick-btn .quick-icon { display: none; }
+      .quick-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; }
+      .quick-btn strong { font-size: 11px; }
+      .register-section { display: contents; }
+      .selection-info { display: none; }
+      .register-btn { flex: 1.2; padding: 0; height: 44px; font-size: 14px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 10px; }
+      .history-section { flex: 1; margin: 0; display: flex; min-width: 0; }
+      .history-section h3 { display: none; }
+      .history-list { flex: 1; display: flex; }
+      .history-item { flex: 1; padding: 0 4px; height: 44px; flex-direction: column; justify-content: center; align-items: center; border-radius: 10px; background: rgba(255,255,255,0.7); box-shadow: none; border: 1px solid rgba(0,0,0,0.05); }
+      .history-item .hi-title { font-size: 9px; color: #888; }
+      .history-item .hi-location { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+      .history-item .hi-time { display: none; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ========================================== -->
+  <!-- 메인 화면: 희수/차미 주차 정보 카드            -->
+  <!-- ========================================== -->
+  <div id="main-screen" class="screen">
+    <!-- 앱 헤더 -->
+    <header class="app-header">
+      <h1><span>🅿️</span> 차미희수 주차위치</h1>
+      <button class="settings-btn" id="settings-btn" title="차량 아이콘 변경">⚙️</button>
+    </header>
+    
+    <!-- 히어로 배너 추가 -->
+    <div class="hero-banner">
+      <h2>편리한 주차 위치 관리</h2>
+      <p>오늘도 안전운전 하세요!</p>
+    </div>
+
+    <!-- 좌우 분할 카드 -->
+    <div class="users-container">
+      <!-- 희수 카드 -->
+      <div class="user-card heesoo" id="card-heesoo">
+        <div class="minimap-wrap" id="minimap-heesoo"></div>
+        <div class="user-info-wrap">
+          <div class="user-name">
+            <span class="car-icon-display" id="icon-heesoo">🚗</span>
+            희수
+          </div>
+          <div id="info-heesoo" class="parking-info">
+            <span class="not-registered">미등록</span>
+          </div>
+          <div id="time-heesoo" class="parking-time"></div>
+        </div>
+      </div>
+      <!-- 차미 카드 -->
+      <div class="user-card chami" id="card-chami">
+        <div class="minimap-wrap" id="minimap-chami"></div>
+        <div class="user-info-wrap">
+          <div class="user-name">
+            <span class="car-icon-display" id="icon-chami">🚗</span>
+            차미
+          </div>
+          <div id="info-chami" class="parking-info">
+            <span class="not-registered">미등록</span>
+          </div>
+          <div id="time-chami" class="parking-time"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 상세/등록 화면                                -->
+  <!-- ========================================== -->
+  <div id="detail-screen" class="screen hidden">
+    <!-- 헤더 -->
+    <header class="detail-header">
+      <button class="back-btn" id="back-btn">← 뒤로</button>
+      <h2 id="detail-title">주차 등록</h2>
+    </header>
+
+    <!-- 본문 2단 분리 (PC 기준) -->
+    <div class="detail-content">
+      <!-- 좌측 영역: 70% -->
+      <div class="left-panel">
+        <!-- 층 선택 탭 -->
+        <div class="floor-tabs" id="floor-tabs"></div>
+        <!-- 주차장 배치도 -->
+        <div class="map-container" id="detail-map"></div>
+      </div>
+
+      <!-- 우측 영역: 30% 조작 패널 -->
+      <div class="right-panel">
+        <div class="register-section">
+          <!-- 1) 빠른 재등록 -->
+          <div class="quick-register" id="quick-register"></div>
+          
+          <!-- 2) 선택 상태 텍스트 -->
+          <div class="selection-info" id="selection-info">층과 구역을 선택해 주세요</div>
+          
+          <!-- 3) 등록하기 버튼 (가장 눈에 띄게) -->
+          <button class="register-btn" id="register-btn" disabled>등록하기</button>
+        </div>
+        
+        <!-- 4) 최근 이력 리스트 -->
+        <div class="history-section">
+          <h3>📋 최근 이력</h3>
+          <div class="history-list" id="history-list">
+            <div class="history-item" style="color:var(--color-text-dim)">이력이 없습니다</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 차량 아이콘 선택 모달                         -->
+  <!-- ========================================== -->
+  <div id="icon-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3>🚗 차량 아이콘 선택</h3>
+      <!-- 희수 아이콘 -->
+      <div class="modal-user-section">
+        <h4 class="heesoo-title">🩵 희수</h4>
+        <div class="icon-options" id="icons-heesoo"></div>
+      </div>
+      <!-- 차미 아이콘 -->
+      <div class="modal-user-section">
+        <h4 class="chami-title">💚 차미</h4>
+        <div class="icon-options" id="icons-chami"></div>
+      </div>
+      <button class="modal-close-btn" id="modal-close-btn">닫기</button>
+    </div>
+  </div>
+
+  <!-- 토스트 알림 -->
+  <div id="toast"></div>
+
+  <!-- ========================================== -->
+  <!-- JavaScript — Firebase + 앱 로직              -->
+  <!-- ========================================== -->
+  <script type="module">
+    // ============================================
+    // 1. Firebase SDK 가져오기 (CDN 모듈 방식)
+    // ============================================
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    // ============================================
+    // 2. Firebase 설정
+    //    ⚠️ 아래 값을 본인의 Firebase 프로젝트 값으로
+    //       교체해 주세요! (Firebase Console에서 확인)
+    // ============================================
+    const firebaseConfig = {
+      apiKey:            "AIzaSyAN1EWDoLKC5z0Bt2doFl0qP0IrDmNRpMo",
+      authDomain:        "parking-web-5ab20.firebaseapp.com",
+      databaseURL:       "https://parking-web-5ab20-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId:         "parking-web-5ab20",
+      storageBucket:     "parking-web-5ab20.firebasestorage.app",
+      messagingSenderId: "430170192056",
+      appId:             "1:430170192056:web:dc238cb79eee2c05955c4d",
+      measurementId:     "G-VJH0FS4123"
+    };
+
+    // Firebase 초기화 — 설정이 잘못되면 에러 토스트 표시
+    let db;
+    try {
+      const app = initializeApp(firebaseConfig);
+      db = getDatabase(app);
+    } catch (err) {
+      console.error('Firebase 초기화 실패:', err);
+      showToast('⚠️ Firebase 설정을 확인해 주세요!');
+    }
+
+    // ============================================
+    // 3. 차량 아이콘 목록 (이모지 기반 5종)
+    // ============================================
+    const CAR_ICONS = [
+      { id: 'sedan',   emoji: '🚗',  name: '세단' },
+      { id: 'suv',     emoji: '🚙',  name: 'SUV' },
+      { id: 'compact', emoji: '🚘',  name: '소형차' },
+      { id: 'truck',   emoji: '🛻',  name: '트럭' },
+      { id: 'sport',   emoji: '🏎️', name: '스포츠카' },
+    ];
+
+    // 아이콘 ID로 이모지 반환
+    function getCarEmoji(iconId) {
+      return CAR_ICONS.find(i => i.id === iconId)?.emoji || '🚗';
+    }
+
+    // ============================================
+    // 4. 주차장 구역 데이터 정의
+    //    - id: 구역 코드
+    //    - type: 구역 유형 (normal/compact/ev/road/entrance)
+    //    - slots: 해당 구역의 칸 수 (빨간선 구분)
+    //    - row/col: CSS Grid 배치 좌표 [시작, 끝]
+    //    - label: 표시 텍스트 (통로/출입구)
+    // ============================================
+    const ZONES = [
+      // === 좌측 세로 (B13 포함) ===
+      { id: '서측', label: '남측', type: 'normal', slots: 10, row: [1,11], col: [1,2], dir: 'col' },
+
+      // === 상단 길 ===
+      { id: '내려가는길', type: 'road', slots: 0, row: [2,3], col: [3,8], label: '내려가는<br>길' },
+      { id: '올라가는길', type: 'road', slots: 0, row: [2,3], col: [10,15], label: '올라가는<br>길' },
+
+      // === B08, B09 영역 ===
+      { id: '북서측', label: '서남측', type: 'normal', slots: 4, row: [3,4], col: [3,8] },
+      { id: '북동측', label: '서북측', type: 'normal', slots: 4, row: [3,4], col: [10,15] },
+      { id: '우측모서리', label: '북측모서리', type: 'normal', slots: 2, row: [3,4], col: [15,17] },
+
+      // === 103동 출입구 ===
+      { id: '출입구', type: 'entrance', slots: 0, row: [6,8], col: [3,11], label: '103동<br>출입구' },
+
+      // === 출입구 우측 (경차 및 일반) ===
+      { id: '중앙경차1', type: 'compact', slots: 1, row: [6,7], col: [11,13] },
+      { id: '중앙일반',  type: 'normal',  slots: 3, row: [6,7], col: [13,17] },
+      { id: '중앙경차2', type: 'compact', slots: 1, row: [7,8], col: [11,13] },
+      { id: '중앙경차3', type: 'compact', slots: 1, row: [7,8], col: [13,15] },
+
+      // === B14 (우측 세로) ===
+      { id: '중앙동측', label: '중앙북측', type: 'normal', slots: 3, row: [6,9], col: [17,18], dir: 'col' },
+
+      // === 우측 세로 (전기차 및 B12) ===
+      { id: '동측상단', label: '북서측',  type: 'normal', slots: 2, row: [1,3], col: [19,20], dir: 'col' },
+      { id: '전기차1', type: 'ev',     slots: 1, row: [3,4], col: [19,20], dir: 'col' },
+      { id: '전기차2', type: 'ev',     slots: 1, row: [4,5], col: [19,20], dir: 'col' },
+      { id: '동측하단', label: '북동측', type: 'normal', slots: 6, row: [5,11], col: [19,20], dir: 'col' },
+
+      // === 하단 가로 (B15, B16, B17 묶음) ===
+      { id: '남측', label: '동측', type: 'normal', slots: 12, row: [11,12], col: [2,20] },
+    ];
+
+    // ============================================
+    // 5. 구역 선택 제한 로직
+    //    - 통로/출입구: 선택 불가
+    //    - 전기차 전용: 선택 불가 (안내 메시지)
+    //    - 경차 전용: 희수는 선택 불가 (안내 메시지)
+    // ============================================
+    function canSelect(zone, user) {
+      if (zone.type === 'road' || zone.type === 'entrance') return false;
+      if (zone.type === 'ev') {
+        showToast('⚡ 전기차 전용 구역입니다');
+        return false;
+      }
+      if (zone.type === 'compact' && user === '희수') {
+        showToast('🚙 경차 전용 구역입니다. 희수 차는 주차할 수 없어요');
+        return false;
+      }
+      return true;
+    }
+
+    // ============================================
+    // 6. 과거 영어 ID -> 한글 변환 매핑
+    // ============================================
+    function getZoneName(id) {
+      const map = {
+        'L1': '남측', 'ROAD_DOWN': '내려가는길', 'ROAD_UP': '올라가는길',
+        'B08': '서남측', 'B09': '서북측', 'TR1': '북측모서리',
+        'ENTRANCE': '출입구', 'CP1': '중앙경차1', 'C1': '중앙일반',
+        'CP2': '중앙경차2', 'CP3': '중앙경차3', 'B14': '중앙북측',
+        'R1': '북서측', 'EV1': '전기차1', 'EV2': '전기차2',
+        'B12': '북동측', 'BTM': '동측',
+        // 이전 한국어 ID 매핑
+        '서측': '남측', '북서측': '서남측', '북동측': '서북측', '우측모서리': '북측모서리',
+        '중앙동측': '중앙북측', '동측상단': '북서측', '동측하단': '북동측', '남측': '동측'
+      };
+      return map[id] || id;
+    }
+
+    // ============================================
+    // 7. 앱 상태 관리 (전역 변수)
+    //    - localStorage 미사용! 모든 데이터는 Firebase에만 저장
+    // ============================================
+    let usersData = { '희수': null, '차미': null };   // Firebase에서 읽어온 사용자 데이터
+    let currentUser = null;       // 현재 상세 화면의 사용자 ('희수' 또는 '차미')
+    let selectedFloor = 'B2';     // 현재 선택된 층
+    let selectedZone  = null;     // 현재 선택된 구역 ID
+    let selectedSlot  = null;     // 현재 선택된 칸 번호
+    let pinchAbortCtrl = null;    // 핀치 줌 이벤트 리스너 제어용 (중복 방지)
+
+    // ============================================
+    // 7. Firebase 실시간 리스너 설정
+    //    - 한쪽에서 등록하면 다른 기기 화면도 자동 갱신!
+    // ============================================
+    function setupListeners() {
+      if (!db) return;
+
+      // 희수 데이터 리스너
+      onValue(ref(db, 'users/희수'), (snapshot) => {
+        usersData['희수'] = snapshot.val();
+        updateMainCard('희수');
+        // 상세 화면 열려 있으면 맵도 갱신
+        if (currentUser) renderDetailMap();
+      });
+
+      // 차미 데이터 리스너
+      onValue(ref(db, 'users/차미'), (snapshot) => {
+        usersData['차미'] = snapshot.val();
+        updateMainCard('차미');
+        if (currentUser) renderDetailMap();
+      });
+    }
+
+    // ============================================
+    // 8. 메인 화면 카드 업데이트
+    //    - Firebase에서 데이터가 바뀔 때마다 호출됨
+    // ============================================
+    function updateMainCard(userName) {
+      const data = usersData[userName];
+      const infoEl = document.getElementById(`info-${userName === '희수' ? 'heesoo' : 'chami'}`);
+      const timeEl = document.getElementById(`time-${userName === '희수' ? 'heesoo' : 'chami'}`);
+      const iconEl = document.getElementById(`icon-${userName === '희수' ? 'heesoo' : 'chami'}`);
+      const minimapEl = document.getElementById(`minimap-${userName === '희수' ? 'heesoo' : 'chami'}`);
+
+      if (data && data.floor) {
+        // 주차 등록됨 — 위치 표시
+        iconEl.textContent = getCarEmoji(data.carIcon);
+        infoEl.innerHTML = `<strong>${data.floor} > ${getZoneName(data.zone)} > ${data.slot}번 칸</strong>`;
+        timeEl.textContent = formatDateTime(data.registeredAt);
+        // 미니맵 렌더링 (해당 층)
+        renderMiniMap(minimapEl, data.floor, userName);
+      } else {
+        // 미등록 상태
+        iconEl.textContent = getCarEmoji(data?.carIcon);
+        infoEl.innerHTML = '<span class="not-registered">미등록</span>';
+        timeEl.textContent = '';
+        // 미등록 시 B2층 기본 도면 표시
+        renderMiniMap(minimapEl, 'B2', userName);
+      }
+    }
+
+    // ============================================
+    // 9. 주차장 배치도 렌더링 (공통 함수)
+    //    - interactive: true면 칸 클릭 가능 (상세 화면)
+    //    - mini: true면 축소판 (메인 화면 미니맵)
+    // ============================================
+    function createParkingGrid(floor, interactive, mini, targetUser) {
+      const grid = document.createElement('div');
+      grid.className = 'parking-grid' + (mini ? ' mini' : '');
+
+      ZONES.forEach(zone => {
+        const zoneEl = document.createElement('div');
+        zoneEl.className = `zone zone-${zone.type}`;
+        zoneEl.style.gridRow    = `${zone.row[0]}/${zone.row[1]}`;
+        zoneEl.style.gridColumn = `${zone.col[0]}/${zone.col[1]}`;
+
+        // 통로/출입구: 라벨만 표시
+        if (zone.type === 'road' || zone.type === 'entrance') {
+          if (zone.label) {
+            const lbl = document.createElement('span');
+            lbl.className = 'road-label';
+            lbl.innerHTML = zone.label;
+            zoneEl.appendChild(lbl);
+          }
+          grid.appendChild(zoneEl);
+          return;
+        }
+
+        // 구역 이름 라벨
+        const label = document.createElement('span');
+        label.className = 'zone-label';
+        label.textContent = zone.label || zone.id;
+        zoneEl.appendChild(label);
+
+        // 유형 라벨 (경차/전기차)
+        if (zone.type === 'compact') {
+          const tl = document.createElement('span');
+          tl.className = 'zone-type-label';
+          tl.textContent = '경차';
+          zoneEl.appendChild(tl);
+        } else if (zone.type === 'ev') {
+          const tl = document.createElement('span');
+          tl.className = 'zone-type-label';
+          tl.textContent = 'EV';
+          zoneEl.appendChild(tl);
+        }
+
+        // 칸(slot) 생성
+        const slotsRow = document.createElement('div');
+        slotsRow.className = 'slots-row';
+        if (zone.dir === 'col') slotsRow.classList.add('col-dir');
+
+        for (let s = 1; s <= zone.slots; s++) {
+          const slotEl = document.createElement('div');
+          slotEl.className = 'slot';
+          slotEl.dataset.zone = zone.id;
+          slotEl.dataset.slot = s;
+
+          // 상세 화면에서는 칸 번호를 <span>으로 감싸기 (모바일 회전 시 역회전 적용)
+          if (!mini) {
+            const slotTxt = document.createElement('span');
+            slotTxt.className = 'slot-text';
+            slotTxt.textContent = s;
+            slotEl.appendChild(slotTxt);
+          }
+
+          // 주차된 차량 마커 표시 (이모지 + 이름 텍스트 포함)
+          const hd = usersData['희수'];
+          if (hd && hd.floor === floor && getZoneName(hd.zone) === getZoneName(zone.id) && hd.slot === s) {
+            slotEl.classList.add('parked', 'parked-heesoo');
+            slotEl.innerHTML = `<span class="car-marker">${getCarEmoji(hd.carIcon)}<span class="car-name">희수</span></span>`;
+          }
+          const cd = usersData['차미'];
+          if (cd && cd.floor === floor && getZoneName(cd.zone) === getZoneName(zone.id) && cd.slot === s) {
+            slotEl.classList.add('parked', 'parked-chami');
+            slotEl.innerHTML = `<span class="car-marker">${getCarEmoji(cd.carIcon)}<span class="car-name">차미</span></span>`;
+          }
+
+          // 미니맵에서 타겟 유저 위치 강조 핀 (차량 마커 위에 렌더링되도록 뒤에 배치)
+          if (mini && targetUser) {
+            const td = usersData[targetUser];
+            if (td && td.floor === floor && getZoneName(td.zone) === getZoneName(zone.id) && td.slot === s) {
+              slotEl.style.background = 'rgba(255, 71, 87, 0.9)';
+              slotEl.style.position = 'relative';
+              slotEl.insertAdjacentHTML('beforeend', '<span style="font-size: 50px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 100; opacity: 1; text-shadow: 0 4px 8px rgba(0,0,0,0.9);">📍</span>');
+            }
+          }
+
+          // 현재 선택된 칸 표시 (상세 화면에서만)
+          if (interactive && selectedZone === zone.id && selectedSlot === s) {
+            slotEl.classList.add('selected');
+            if(currentUser === '희수') slotEl.classList.add('selected-heesoo');
+            else slotEl.classList.add('selected-chami');
+          }
+
+          // 상세 화면에서 칸 클릭 이벤트
+          if (interactive) {
+            const zoneData = zone;
+            const slotNum = s;
+            slotEl.addEventListener('click', () => {
+              handleSlotClick(zoneData, slotNum);
+            });
+          }
+
+          slotsRow.appendChild(slotEl);
+        }
+
+        zoneEl.appendChild(slotsRow);
+        grid.appendChild(zoneEl);
+      });
+
+      if (!mini) {
+        // =============================================
+        // 모바일에서 도면이 rotate(-90deg)로 회전되므로
+        // Grid 좌표 → 모바일 화면 좌표 변환:
+        //   Grid top(%)  → 모바일 left (가로 위치)
+        //   Grid right(%) → 모바일 top (세로 위치)
+        //   Grid left(%)  → 모바일 bottom (세로 위치)
+        //   Grid bottom(%) → 모바일 right (가로 위치)
+        // =============================================
+
+        // ① 북: 모바일 화면 상단 중앙
+        // → Grid: top 45%(모바일 좌우 중앙), right 5%(모바일 상단 가장자리 가까이)
+        const dirN = document.createElement('div'); dirN.className = 'grid-dir-inner'; dirN.textContent = '북';
+        dirN.style.top = '45%'; dirN.style.right = '5%'; grid.appendChild(dirN);
+
+        // ② 동: 모바일 화면 우측 중간
+        // → Grid: top 82%(모바일 오른쪽에 치우침), left 43%(모바일 상하 중간)
+        const dirE = document.createElement('div'); dirE.className = 'grid-dir-inner'; dirE.textContent = '동';
+        dirE.style.top = '82%'; dirE.style.left = '43%'; grid.appendChild(dirE);
+
+        // ③ 남: 모바일 화면 하단 중앙
+        // → Grid: top 45%(모바일 좌우 중앙), left 2%(모바일 하단 가장자리 가까이)
+        const dirS = document.createElement('div'); dirS.className = 'grid-dir-inner'; dirS.textContent = '남';
+        dirS.style.top = '45%'; dirS.style.left = '2%'; grid.appendChild(dirS);
+
+        // 서: 모바일 화면 좌측 중간 (기존 유지)
+        // → Grid: top 2%(모바일 좌측 가장자리), left 45%(모바일 상하 중간)
+        const dirW = document.createElement('div'); dirW.className = 'grid-dir-inner'; dirW.textContent = '서';
+        dirW.style.top = '2%'; dirW.style.left = '45%'; grid.appendChild(dirW);
+      }
+
+      return grid;
+    }
+
+    // ============================================
+    // 10. 메인 화면 미니맵 렌더링
+    // ============================================
+    function renderMiniMap(container, floor, userName) {
+      container.innerHTML = '';
+      const grid = createParkingGrid(floor, false, true, userName);
+      container.appendChild(grid);
+    }
+
+    // ============================================
+    // 11. 상세 화면 배치도 렌더링
+    // ============================================
+    function renderDetailMap() {
+      const container = document.getElementById('detail-map');
+      container.innerHTML = '';
+
+      // 이전 핀치 줌 리스너 정리 (중복 방지)
+      if (pinchAbortCtrl) { pinchAbortCtrl.abort(); pinchAbortCtrl = null; }
+
+      // 줌 래퍼 생성
+      const wrapper = document.createElement('div');
+      wrapper.className = 'map-zoom-wrapper';
+      wrapper.id = 'map-zoom-wrapper';
+
+      const grid = createParkingGrid(selectedFloor, true, false);
+      wrapper.appendChild(grid);
+      container.appendChild(wrapper);
+
+      initPinchZoom(container, wrapper);
+    }
+
+    // ============================================
+    // 12. 칸 클릭 처리
+    //    - 구역 유형 확인 → 선택 가능하면 상태 업데이트
+    // ============================================
+    function handleSlotClick(zone, slotNum) {
+      // 선택 제한 확인
+      if (!canSelect(zone, currentUser)) return;
+
+      // 같은 칸을 다시 탭하면 선택 해제
+      if (selectedZone === zone.id && selectedSlot === slotNum) {
+        selectedZone = null;
+        selectedSlot = null;
+      } else {
+        selectedZone = zone.id;
+        selectedSlot = slotNum;
+      }
+
+      // UI 업데이트
+      renderDetailMap();
+      updateSelectionInfo();
+    }
+
+    // ============================================
+    // 13. 선택 정보 텍스트 + 등록 버튼 활성화
+    // ============================================
+    function updateSelectionInfo() {
+      const infoEl  = document.getElementById('selection-info');
+      const btnEl   = document.getElementById('register-btn');
+
+      if (selectedFloor && selectedZone && selectedSlot) {
+        infoEl.innerHTML = `선택: <strong>${selectedFloor} > ${selectedZone} > ${selectedSlot}번 칸</strong>`;
+        btnEl.disabled = false;
+        btnEl.className = `register-btn active ${currentUser === '희수' ? 'heesoo' : 'chami'}`;
+        btnEl.innerHTML = `${selectedZone}-${selectedSlot} 등록`;
+      } else if (selectedZone) {
+        infoEl.innerHTML = `구역 <strong>${selectedZone}</strong> — 칸을 선택해 주세요`;
+        btnEl.disabled = true;
+        btnEl.className = 'register-btn';
+        btnEl.innerHTML = '등록하기';
+      } else {
+        infoEl.textContent = '층과 구역을 선택해 주세요';
+        btnEl.disabled = true;
+        btnEl.className = 'register-btn';
+        btnEl.innerHTML = '등록하기';
+      }
+    }
+
+    // ============================================
+    // 14. 주차 등록 (Firebase에 저장)
+    // ============================================
+    async function handleRegister() {
+      if (!currentUser || !selectedFloor || !selectedZone || !selectedSlot) return;
+      if (!db) {
+        showToast('⚠️ Firebase가 연결되지 않았습니다');
+        return;
+      }
+
+      try {
+        const now = new Date().toISOString();
+        const userRef = ref(db, `users/${currentUser}`);
+
+        // 기존 데이터 가져오기 (이력 관리용)
+        const snapshot = await get(userRef);
+        const currentData = snapshot.val() || {};
+        const currentIcon = currentData.carIcon || 'sedan';
+
+        // 이력 배열 관리 — 새 이력을 맨 앞에 추가, 3개까지만 유지
+        const history = Array.isArray(currentData.history) ? [...currentData.history] : [];
+        history.unshift({
+          floor: selectedFloor,
+          zone:  selectedZone,
+          slot:  selectedSlot,
+          registeredAt: now
+        });
+        // 4번째 이후 항목 제거 (최근 3개만 유지)
+        if (history.length > 3) history.length = 3;
+
+        // Firebase에 저장
+        await set(userRef, {
+          floor:        selectedFloor,
+          zone:         selectedZone,
+          slot:         selectedSlot,
+          registeredAt: now,
+          carIcon:      currentIcon,
+          history:      history
+        });
+
+        showToast(`✅ ${currentUser}의 주차 위치가 등록되었습니다!`);
+
+        // 메인 화면으로 복귀
+        goToMain();
+      } catch (err) {
+        console.error('등록 실패:', err);
+        showToast('❌ 등록에 실패했습니다. 다시 시도해 주세요');
+      }
+    }
+
+    // ============================================
+    // 15. 빠른 재등록
+    //    - 이력 첫 번째 항목의 층+구역+칸을 1탭으로 등록
+    // ============================================
+    async function quickRegister(historyItem) {
+      if (!currentUser || !db) return;
+
+      try {
+        const now = new Date().toISOString();
+        const userRef = ref(db, `users/${currentUser}`);
+        const snapshot = await get(userRef);
+        const currentData = snapshot.val() || {};
+        const currentIcon = currentData.carIcon || 'sedan';
+
+        const history = Array.isArray(currentData.history) ? [...currentData.history] : [];
+        history.unshift({
+          floor: historyItem.floor,
+          zone:  historyItem.zone,
+          slot:  historyItem.slot,
+          registeredAt: now
+        });
+        if (history.length > 3) history.length = 3;
+
+        await set(userRef, {
+          floor:        historyItem.floor,
+          zone:         historyItem.zone,
+          slot:         historyItem.slot,
+          registeredAt: now,
+          carIcon:      currentIcon,
+          history:      history
+        });
+
+        showToast(`✅ 빠른 등록 완료! (${historyItem.floor} > ${historyItem.zone} > ${historyItem.slot}번)`);
+        goToMain();
+      } catch (err) {
+        console.error('빠른 등록 실패:', err);
+        showToast('❌ 등록에 실패했습니다');
+      }
+    }
+
+    // ============================================
+    // 16. 화면 전환 — 메인 ↔ 상세
+    // ============================================
+    function goToDetail(userName) {
+      currentUser   = userName;
+      selectedFloor = usersData[userName]?.floor || 'B2';
+      selectedZone  = null;
+      selectedSlot  = null;
+
+      // 화면 전환
+      document.getElementById('main-screen').classList.add('hidden');
+      document.getElementById('detail-screen').classList.remove('hidden');
+
+      // 헤더 제목
+      document.getElementById('detail-title').textContent = `${userName}의 주차 등록`;
+
+      // 층 탭 렌더링
+      renderFloorTabs();
+      // 배치도 렌더링
+      renderDetailMap();
+      // 선택 정보 초기화
+      updateSelectionInfo();
+      // 빠른 재등록 + 이력 렌더링
+      renderQuickRegister();
+      renderHistory();
+    }
+
+    function goToMain() {
+      currentUser  = null;
+      selectedZone = null;
+      selectedSlot = null;
+
+      document.getElementById('detail-screen').classList.add('hidden');
+      document.getElementById('main-screen').classList.remove('hidden');
+    }
+
+    // ============================================
+    // 17. 층 선택 탭 렌더링
+    // ============================================
+    function renderFloorTabs() {
+      const container = document.getElementById('floor-tabs');
+      container.innerHTML = '';
+      const floors = ['B2', 'B3', 'B4', 'B5', 'B6'];
+
+      floors.forEach(floor => {
+        const btn = document.createElement('button');
+        btn.className = 'floor-tab' + (floor === selectedFloor ? ' active' : '');
+        if (floor === selectedFloor) btn.classList.add(currentUser === '희수' ? 'active-heesoo' : 'active-chami');
+        btn.textContent = floor;
+        btn.addEventListener('click', () => {
+          selectedFloor = floor;
+          selectedZone  = null;
+          selectedSlot  = null;
+          renderFloorTabs();
+          renderDetailMap();
+          updateSelectionInfo();
+        });
+        container.appendChild(btn);
+      });
+    }
+
+    // ============================================
+    // 18. 빠른 재등록 버튼 렌더링
+    // ============================================
+    function renderQuickRegister() {
+      const container = document.getElementById('quick-register');
+      container.innerHTML = '';
+      const data = usersData[currentUser];
+      if (!data || !data.history || data.history.length === 0) return;
+
+      const latest = data.history[0];
+      const btn = document.createElement('button');
+      btn.className = 'quick-btn';
+      btn.innerHTML = `
+        <span class="quick-title" style="font-size:9px; color:#888;">빠른재등록</span>
+        <span style="font-size:11px; overflow:hidden; text-overflow:ellipsis;">${latest.floor}, <strong>${getZoneName(latest.zone)}-${latest.slot}</strong></span>
+      `;
+      btn.addEventListener('click', () => quickRegister(latest));
+      container.appendChild(btn);
+    }
+
+    // ============================================
+    // 19. 최근 이력 목록 렌더링
+    // ============================================
+    function renderHistory() {
+      const container = document.getElementById('history-list');
+      container.innerHTML = '';
+      const data = usersData[currentUser];
+
+      if (!data || !data.history || data.history.length === 0) {
+        container.innerHTML = '<div class="history-item" style="color:var(--color-text-dim); font-size:11px;">이력이 없습니다</div>';
+        return;
+      }
+
+      data.history.slice(0, 1).forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        div.innerHTML = `
+          <span class="hi-title">최근주차</span>
+          <span class="hi-location">${item.floor}, ${formatDateTime(item.registeredAt).split(' ')[0]}</span>
+          <span class="hi-time" style="display:none;"></span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // ============================================
+    // 20. 차량 아이콘 선택 모달
+    // ============================================
+    function openIconModal() {
+      const modal = document.getElementById('icon-modal');
+      modal.classList.remove('hidden');
+
+      // 각 사용자의 아이콘 옵션 렌더링
+      ['희수', '차미'].forEach(user => {
+        const containerId = `icons-${user === '희수' ? 'heesoo' : 'chami'}`;
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+        const currentIcon = usersData[user]?.carIcon || 'sedan';
+
+        CAR_ICONS.forEach(icon => {
+          const btn = document.createElement('button');
+          btn.className = 'icon-option' + (icon.id === currentIcon ? ' selected' : '');
+          btn.textContent = icon.emoji;
+          btn.title = icon.name;
+          btn.addEventListener('click', async () => {
+            await saveCarIcon(user, icon.id);
+            // 선택 상태 업데이트
+            container.querySelectorAll('.icon-option').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            showToast(`${icon.emoji} ${user}의 아이콘이 변경되었습니다`);
+          });
+          container.appendChild(btn);
+        });
+      });
+    }
+
+    function closeIconModal() {
+      document.getElementById('icon-modal').classList.add('hidden');
+    }
+
+    // 차량 아이콘 Firebase에 저장
+    async function saveCarIcon(userName, iconId) {
+      if (!db) return;
+      try {
+        const userRef = ref(db, `users/${userName}`);
+        const snapshot = await get(userRef);
+        const currentData = snapshot.val() || {};
+        // 기존 데이터 유지하면서 아이콘만 업데이트
+        await set(userRef, { ...currentData, carIcon: iconId });
+      } catch (err) {
+        console.error('아이콘 저장 실패:', err);
+      }
+    }
+
+    // ============================================
+    // 21. 유틸리티 함수
+    // ============================================
+
+    // 날짜 포맷: ISO 문자열 → "5/23(금) 오전 8:32"
+    function formatDateTime(isoString) {
+      if (!isoString) return '';
+      const d = new Date(isoString);
+      const days = ['일','월','화','수','목','금','토'];
+      const month   = d.getMonth() + 1;
+      const day     = d.getDate();
+      const dayName = days[d.getDay()];
+      const hours   = d.getHours();
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      const ampm    = hours < 12 ? '오전' : '오후';
+      const h12     = hours % 12 || 12;
+      return `${month}/${day}(${dayName}) ${ampm} ${h12}:${minutes}`;
+    }
+
+    // 토스트 알림 표시
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    // ============================================
+    // 22. 오프라인 감지
+    // ============================================
+    window.addEventListener('offline', () => {
+      showToast('⚠️ 인터넷 연결이 필요합니다');
+    });
+    window.addEventListener('online', () => {
+      showToast('✅ 인터넷에 다시 연결되었습니다');
+    });
+
+    // ============================================
+    // 23. 이벤트 바인딩
+    //    - module 스크립트에서는 onclick 속성 대신
+    //      addEventListener로 이벤트를 연결합니다
+    // ============================================
+    // 메인 화면 — 사용자 카드 클릭
+    document.getElementById('card-heesoo').addEventListener('click', () => goToDetail('희수'));
+    document.getElementById('card-chami').addEventListener('click',  () => goToDetail('차미'));
+
+    // 메인 화면 — 설정 버튼
+    document.getElementById('settings-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openIconModal();
+    });
+
+    // 상세 화면 — 뒤로 가기
+    document.getElementById('back-btn').addEventListener('click', goToMain);
+
+    // 상세 화면 — 등록 버튼
+    document.getElementById('register-btn').addEventListener('click', handleRegister);
+
+    // 모달 — 닫기 버튼
+    document.getElementById('modal-close-btn').addEventListener('click', closeIconModal);
+
+    // 모달 — 배경 클릭으로 닫기
+    document.getElementById('icon-modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeIconModal();
+    });
+
+    // ============================================
+    // 핀치 줌 (Pinch-to-Zoom) — Touch Events API 기반
+    // ============================================
+    function initPinchZoom(container, wrapper) {
+      pinchAbortCtrl = new AbortController();
+      const signal = pinchAbortCtrl.signal;
+      const isMobile = window.innerWidth < 768;
+
+      let scale = 1;
+      let minScale = 1;
+      let posX = 0;
+      let posY = 0;
+
+      // touch-action 강제 설정
+      container.style.touchAction = 'none';
+      wrapper.style.touchAction = 'none';
+
+      function applyTransform() {
+        if (isMobile) {
+          wrapper.style.transform = `translate(-50%, -50%) translate(${posX}px, ${posY}px) rotate(-90deg) scale(${scale})`;
+        } else {
+          wrapper.style.transform = `translate(-50%, -50%) translate(${posX}px, ${posY}px) scale(${scale})`;
+        }
+      }
+
+      if (isMobile) {
+        requestAnimationFrame(() => {
+          const cW = container.clientWidth || window.innerWidth;
+          const cH = container.clientHeight || 300;
+          // 회전하면 900x521 도면이 시각적으로 521x900이 됨
+          const visualW = 521;
+          const visualH = 900;
+          
+          const scaleW = cW / visualW;
+          const scaleH = cH / visualH;
+          // 여백을 주기 위해 0.95 곱함
+          scale = Math.min(scaleW, scaleH) * 0.95;
+          minScale = scale;
+          applyTransform();
+        });
+      }
+
+      let lastDist = 0;
+      let isPinching = false;
+      let dragStartX = 0, dragStartY = 0;
+      let dragStartPosX = 0, dragStartPosY = 0;
+      let lastTap = 0;
+
+      container.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+          e.preventDefault();
+          isPinching = true;
+          lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        } else if (e.touches.length === 1) {
+          dragStartX = e.touches[0].clientX;
+          dragStartY = e.touches[0].clientY;
+          dragStartPosX = posX;
+          dragStartPosY = posY;
+          
+          const now = Date.now();
+          if (now - lastTap < 300) {
+            e.preventDefault();
+            if (scale > minScale * 1.2) {
+              scale = minScale; posX = 0; posY = 0;
+            } else {
+              scale = minScale * 2.5;
+            }
+            applyTransform();
+          }
+          lastTap = now;
+        }
+      }, { passive: false, signal });
+
+      container.addEventListener('touchmove', (e) => {
+        if (isPinching && e.touches.length === 2) {
+          e.preventDefault();
+          const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+          const ratio = dist / lastDist;
+          scale = Math.max(minScale, Math.min(minScale * 5, scale * ratio));
+          lastDist = dist;
+          applyTransform();
+        } else if (!isPinching && e.touches.length === 1 && scale > minScale) {
+          e.preventDefault();
+          const dx = e.touches[0].clientX - dragStartX;
+          const dy = e.touches[0].clientY - dragStartY;
+          posX = dragStartPosX + dx;
+          posY = dragStartPosY + dy;
+          applyTransform();
+        }
+      }, { passive: false, signal });
+
+      container.addEventListener('touchend', (e) => {
+        if (e.touches.length < 2) isPinching = false;
+        if (scale <= minScale) {
+           scale = minScale; posX = 0; posY = 0;
+           applyTransform();
+        }
+      }, { passive: false, signal });
+    }
+
+    // ============================================
+    // 24. 앱 시작!
+    // ============================================
+    function init() {
+      // 인터넷 연결 확인
+      if (!navigator.onLine) {
+        showToast('⚠️ 인터넷 연결이 필요합니다');
+      }
+
+      // Firebase 리스너 설정
+      setupListeners();
+
+      // 초기 미니맵 렌더링 (Firebase 데이터 없을 때)
+      renderMiniMap(document.getElementById('minimap-heesoo'), 'B2', '희수');
+      renderMiniMap(document.getElementById('minimap-chami'),  'B2', '차미');
+    }
+
+    // 앱 실행
+    init();
+  </script>
+</body>
+</html>
