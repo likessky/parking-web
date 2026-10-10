@@ -454,6 +454,14 @@
     .dpad .d-down { grid-column: 2; grid-row: 2; }
     .dpad .d-right { grid-column: 3; grid-row: 2; }
     .move-opts { display: flex; flex-direction: column; gap: 6px; }
+    /* 함께 밀기 미리보기 */
+    .slot.push-preview, .area.push-preview { outline: 3px dashed #E07B39; outline-offset: 1px; z-index: 5; }
+    .push-confirm {
+      display: none; flex: 1 1 100%; flex-wrap: wrap; align-items: center; gap: 8px;
+      padding: 8px 10px; background: #fff; border: 1.5px dashed #E07B39; border-radius: var(--radius-md);
+    }
+    #detail-screen.push-pending .push-confirm { display: flex; }
+    .push-confirm .push-msg { flex: 1 1 160px; font-size: 13px; font-weight: 700; color: #B85C1E; line-height: 1.4; }
     .area-road { background: var(--subtle); border: 1px dashed var(--border-strong); }
     .area-entrance { background: var(--warning-bg); border: 1px dashed #E3CB93; }
     .area-label { font-size: 12px; font-weight: 800; color: var(--text-2); line-height: 1.25; }
@@ -771,9 +779,15 @@
               <button type="button" class="d-right" data-dir="right" aria-label="오른쪽으로">→</button>
             </div>
             <div class="move-opts">
+              <button type="button" class="btn btn-ghost btn-sm" id="move-mode" style="display:none"></button>
               <button type="button" class="btn btn-ghost btn-sm" id="move-scope"></button>
               <button type="button" class="btn btn-ghost btn-sm" id="move-undo">↶ 되돌리기</button>
               <button type="button" class="btn btn-primary btn-sm" id="move-done">완료</button>
+            </div>
+            <div class="push-confirm">
+              <span class="push-msg" id="push-msg"></span>
+              <button type="button" class="btn btn-primary btn-sm" id="push-ok">함께 밀기</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="push-cancel">취소</button>
             </div>
           </div>
         </div>
@@ -1313,6 +1327,7 @@
         place(el, a.x, a.y, a.w, a.h);
         el.innerHTML = `<span class="area-label">${a.label || ''}</span>`;
         if (moveCtx && moveCtx.kind === 'area' && moveCtx.index === ai) el.classList.add('moving');
+        else if (pendingPush && pendingPush.areaIdx.has(ai)) el.classList.add('push-preview');
         if (isEditView) el.addEventListener('click', () => { if (!moveCtx) startMove({ kind: 'area', index: ai }); });
         cellsEl.appendChild(el);
       });
@@ -1341,6 +1356,7 @@
           if (used > 1) inner += `<span class="use-count">${used}회</span>`;
         }
         if (moveStripId && cell.stripId === moveStripId) slotEl.classList.add('moving');
+        else if (pendingPush && pendingPush.stripIds.has(cell.stripId)) slotEl.classList.add('push-preview');
 
         // 주차된 차량 마커
         let parkedBy = null;
@@ -1647,6 +1663,7 @@
     function undoEdit() {
       if (!draftLayout) return;
       if (!undoStack.length) { showToast('되돌릴 작업이 없어요'); return; }
+      clearPendingPush();
       draftLayout = undoStack.pop();
       draftDirty = true;
       validateMoveCtx();
@@ -1683,6 +1700,7 @@
     }
 
     function leaveEdit() {
+      clearPendingPush();
       draftLayout = null;
       moveCtx = null;
       document.getElementById('detail-screen').classList.remove('moving');
@@ -1730,11 +1748,22 @@
       if (!moveCtx) return;
       const ok = moveCtx.kind === 'strip' ? !!draftLayout?.strips[moveCtx.stripId] : !!draftLayout?.areas[moveCtx.index];
       if (!ok) {
+        clearPendingPush();
         moveCtx = null;
         document.getElementById('detail-screen').classList.remove('moving');
       } else {
         updateMoveUI();
       }
+    }
+
+    // 함께 밀기 미리보기: { dx, dy, stripIds:Set, areaIdx:Set, names:[] }
+    let pendingPush = null;
+
+    function clearPendingPush() {
+      if (!pendingPush) return false;
+      pendingPush = null;
+      document.getElementById('detail-screen').classList.remove('push-pending');
+      return true;
     }
 
     function updateMoveUI() {
@@ -1746,55 +1775,128 @@
       } else {
         name = (draftLayout.areas[moveCtx.index].label || '통로').replace(/<br>/g, ' ');
       }
-      document.getElementById('move-scope').textContent = `이동 단위 ${moveCtx.step}칸`;
-      document.getElementById('move-msg').innerHTML =
-        `<strong>${esc(name)} 이동 중</strong><br>화살표로 옮겨요. 다른 줄은 움직이지 않아요.`;
+      const resizing = moveCtx.kind === 'area' && moveCtx.mode === 'resize';
+      const modeBtn = document.getElementById('move-mode');
+      modeBtn.style.display = moveCtx.kind === 'area' ? '' : 'none';
+      modeBtn.textContent = resizing ? '↔ 이동으로' : '⤢ 크기 조절';
+      document.getElementById('move-scope').textContent = `단위 ${moveCtx.step}칸`;
+      document.getElementById('move-msg').innerHTML = resizing
+        ? `<strong>${esc(name)} 크기 조절 중</strong><br>→/↓로 늘리고 ←/↑로 줄여요. (오른쪽·아래 끝이 움직여요)`
+        : `<strong>${esc(name)} 이동 중</strong><br>화살표로 옮겨요. 막히면 함께 밀 줄을 먼저 보여 드려요.`;
+      if (pendingPush) {
+        const names = [...new Set(pendingPush.names)];
+        document.getElementById('push-msg').innerHTML =
+          `<strong>${esc(names.slice(0, 3).join(', '))}${names.length > 3 ? ' 외' : ''}</strong>도 같이 ${moveCtx.step}칸 밀려요 (주황 표시)`;
+      }
     }
 
     function startMove(ctx) {
       closeCellSheet();
-      moveCtx = { ...ctx, step: 1 };
+      clearPendingPush();
+      moveCtx = { ...ctx, step: 1, mode: 'move' };
       document.getElementById('detail-screen').classList.add('moving');
       updateMoveUI();
       renderDetailMap();
     }
 
     function endMove() {
+      clearPendingPush();
       moveCtx = null;
       document.getElementById('detail-screen').classList.remove('moving');
       renderDetailMap();
     }
 
-    function moveBy(dir) {
-      if (!moveCtx || !draftLayout) return;
-      const [ux, uy] = dirDelta(dir);
-      const dx = ux * moveCtx.step, dy = uy * moveCtx.step;
-      const L = draftLayout;
-      let boxes, apply, ignoreStrip = null, ignoreArea = null;
-
-      if (moveCtx.kind === 'strip') {
-        const s = L.strips[moveCtx.stripId];
-        if (!s) return;
-        boxes = s.slots.map((_, i) => ({
+    // 줄({strip}) 또는 영역({area})이 차지하는 칸 상자들 (dx, dy 만큼 옮긴 위치)
+    function itemBoxes(L, item, dx = 0, dy = 0) {
+      if (item.strip) {
+        const s = L.strips[item.strip];
+        return s.slots.map((_, i) => ({
           x: (s.dir === 'h' ? s.x + i : s.x) + dx,
           y: (s.dir === 'h' ? s.y : s.y + i) + dy,
           w: 1, h: 1
         }));
-        ignoreStrip = s.id;
-        apply = () => { s.x += dx; s.y += dy; };
-      } else {
-        const a = L.areas[moveCtx.index];
-        if (!a) return;
-        boxes = [{ x: a.x + dx, y: a.y + dy, w: a.w, h: a.h }];
-        ignoreArea = a;
-        apply = () => { a.x += dx; a.y += dy; };
       }
+      const a = L.areas[item.area];
+      return [{ x: a.x + dx, y: a.y + dy, w: a.w, h: a.h }];
+    }
 
-      const blocker = findBlocker(L, boxes, ignoreStrip, ignoreArea);
-      if (blocker) { showToast(`'${blocker}'에 막혀서 옮길 수 없어요`); return; }
+    // 옮길 대상 + 가는 길을 막는 줄/영역(연쇄)을 모음. 막는 것만 통째로 같이 움직이고 나머지는 그대로
+    function computePush(L, start, dx, dy) {
+      const stripIds = new Set(), areaIdx = new Set(), names = [];
+      if (start.strip) stripIds.add(start.strip); else areaIdx.add(start.area);
+      const queue = [start];
+      while (queue.length) {
+        const boxes = itemBoxes(L, queue.shift(), dx, dy);
+        Object.values(L.strips).forEach(s => {
+          if (stripIds.has(s.id)) return;
+          if (itemBoxes(L, { strip: s.id }).some(sb => boxes.some(b => boxesOverlap(b, sb)))) {
+            stripIds.add(s.id); names.push(s.zone); queue.push({ strip: s.id });
+          }
+        });
+        L.areas.forEach((a, i) => {
+          if (areaIdx.has(i)) return;
+          if (boxes.some(b => boxesOverlap(b, a))) {
+            areaIdx.add(i); names.push((a.label || '통로').replace(/<br>/g, '')); queue.push({ area: i });
+          }
+        });
+      }
+      return { dx, dy, stripIds, areaIdx, names };
+    }
 
+    function applyPush(plan) {
       pushUndo();
-      apply();
+      plan.stripIds.forEach(id => { const s = draftLayout.strips[id]; s.x += plan.dx; s.y += plan.dy; });
+      plan.areaIdx.forEach(i => { const a = draftLayout.areas[i]; a.x += plan.dx; a.y += plan.dy; });
+      finalizeLayout(draftLayout);
+      draftDirty = true;
+      clearPendingPush();
+      updateMoveUI();
+      renderDetailMap();
+    }
+
+    function confirmPush() { if (pendingPush) applyPush(pendingPush); }
+    function cancelPush() { if (clearPendingPush()) { updateMoveUI(); renderDetailMap(); } }
+
+    function moveBy(dir) {
+      if (!moveCtx || !draftLayout) return;
+      clearPendingPush();
+      if (moveCtx.kind === 'area' && moveCtx.mode === 'resize') { resizeArea(dir); return; }
+      const [ux, uy] = dirDelta(dir);
+      const dx = ux * moveCtx.step, dy = uy * moveCtx.step;
+      const L = draftLayout;
+      const start = moveCtx.kind === 'strip' ? { strip: moveCtx.stripId } : { area: moveCtx.index };
+      if (start.strip ? !L.strips[start.strip] : !L.areas[start.area]) return;
+
+      const plan = computePush(L, start, dx, dy);
+      if (plan.names.length) {
+        // 막는 것이 있으면 바로 옮기지 않고 함께 밀 대상을 보여 준 뒤 확인을 받음
+        pendingPush = plan;
+        document.getElementById('detail-screen').classList.add('push-pending');
+        updateMoveUI();
+        renderDetailMap();
+        return;
+      }
+      applyPush(plan);
+    }
+
+    // 영역 크기 조절: 화면 기준 오른쪽 끝(→ 늘림 / ← 줄임), 아래쪽 끝(↓ 늘림 / ↑ 줄임)
+    function resizeArea(dir) {
+      const L = draftLayout;
+      const a = L.areas[moveCtx.index];
+      if (!a) return;
+      const grow = dir === 'right' || dir === 'down';
+      const [ex, ey] = dirDelta(dir === 'right' || dir === 'left' ? 'right' : 'down');   // 움직이는 끝의 도면 방향
+      const d = grow ? moveCtx.step : -moveCtx.step;
+      const n = { x: a.x, y: a.y, w: a.w, h: a.h };
+      if (ex > 0) n.w += d; else if (ex < 0) { n.x -= d; n.w += d; }
+      if (ey > 0) n.h += d; else if (ey < 0) { n.y -= d; n.h += d; }
+      if (n.w < 0.5 || n.h < 0.5) { showToast('더 줄일 수 없어요'); return; }
+      if (grow) {
+        const blocker = findBlocker(L, [n], null, a);
+        if (blocker) { showToast(`'${blocker}'와 겹쳐서 늘릴 수 없어요`); return; }
+      }
+      pushUndo();
+      Object.assign(a, n);
       finalizeLayout(L);
       draftDirty = true;
       renderDetailMap();
@@ -2182,8 +2284,17 @@
     document.getElementById('move-scope').addEventListener('click', () => {
       if (!moveCtx) return;
       moveCtx.step = moveCtx.step === 1 ? 0.5 : 1;
+      cancelPush();
       updateMoveUI();
     });
+    document.getElementById('move-mode').addEventListener('click', () => {
+      if (!moveCtx || moveCtx.kind !== 'area') return;
+      moveCtx.mode = moveCtx.mode === 'resize' ? 'move' : 'resize';
+      cancelPush();
+      updateMoveUI();
+    });
+    document.getElementById('push-ok').addEventListener('click', confirmPush);
+    document.getElementById('push-cancel').addEventListener('click', cancelPush);
     document.getElementById('move-done').addEventListener('click', endMove);
     document.getElementById('move-undo').addEventListener('click', undoEdit);
     document.getElementById('cell-ok').addEventListener('click', applyCellSheet);
