@@ -6,7 +6,7 @@
   <!-- 희수·차미 주차 위치 공유 모바일 웹 앱           -->
   <!-- ============================================ -->
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>🅿️ 차미희수 주차위치</title>
   <meta name="description" content="평촌푸르지오센트럴파크 지하주차장 주차 위치 실시간 공유">
   <!-- 모바일 홈 화면 추가 시 네이티브 앱처럼 보이게 -->
@@ -342,17 +342,25 @@
       --sel-color: var(--green-500);
       position: relative;
       width: 100%; max-width: 1000px;
-      padding: 30px;
+      padding: 24px;
       margin: 0 auto;
     }
+    /* 칸·통로는 각자의 좌표에 절대 위치 (--g: 칸 사이 간격의 절반) */
+    .parking-grid { --g: 2px; }
     .grid-cells {
-      display: grid; gap: 4px;
+      position: relative;
       width: 100%;
       aspect-ratio: var(--cols) / var(--rows);
     }
+    /* 편집 중: 점 하나 = 1칸 자리. 빈 곳을 탭하면 새 칸 추가 */
+    .grid-cells.edit-surface {
+      background-image: radial-gradient(circle, var(--border-strong) 1.5px, transparent 2px);
+      background-size: calc(100% / var(--cols)) calc(100% / var(--rows));
+      cursor: copy;
+    }
 
     .slot {
-      position: relative; min-width: 0; min-height: 0;
+      position: absolute; min-width: 0; min-height: 0;
       background: #fff;
       border: 1px solid var(--border-strong);
       border-radius: 8px;
@@ -369,7 +377,17 @@
     .slot-ev      { background: var(--info-bg); border-color: #B5D0D5; }
     .slot-compact:hover, .slot-ev:hover { filter: brightness(0.97); }
 
-    .slot-text { font-size: 14px; font-weight: 800; color: rgba(30,57,50,0.38); }
+    .slot-text { position: relative; font-size: 14px; font-weight: 800; color: rgba(30,57,50,0.62); letter-spacing: -0.2px; }
+    /* 내 이용 기록 히트맵 (--heat: 0~1) */
+    .slot-heat {
+      position: absolute; inset: 0; border-radius: inherit;
+      background: var(--sel-color); opacity: calc(var(--heat) * 0.32);
+      pointer-events: none;
+    }
+    .use-count {
+      position: absolute; top: 2px; right: 4px;
+      font-size: 10px; font-weight: 800; color: var(--green-800);
+    }
     .zone-label {
       position: absolute; top: 2px; left: 4px;
       font-size: 10px; font-weight: 800; letter-spacing: -0.3px;
@@ -380,14 +398,14 @@
       font-size: 10px; font-weight: 800; color: var(--green-700);
     }
     .slot-ev .type-badge { color: var(--info-fg); }
-    .fav-star { position: absolute; top: 2px; right: 4px; font-size: 11px; color: var(--gold); }
 
     .slot.selected { box-shadow: 0 0 0 3px var(--sel-color); background: #fff; z-index: 4; }
     .slot.parked { z-index: 3; }
     .slot.parked .slot-text { display: none; }
     .slot.parked-heesoo { background: var(--color-heesoo); border-color: var(--color-heesoo); }
     .slot.parked-chami  { background: var(--color-chami);  border-color: var(--color-chami); }
-    .slot.parked .zone-label, .slot.parked .type-badge, .slot.parked .fav-star { color: rgba(255,255,255,0.85); }
+    .slot.parked .zone-label, .slot.parked .type-badge, .slot.parked .use-count { color: rgba(255,255,255,0.85); }
+    .slot.parked .slot-heat { display: none; }
 
     .car-marker {
       display: flex; flex-direction: column; align-items: center; gap: 1px;
@@ -397,19 +415,45 @@
     .car-name { font-size: 10px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
 
     /* 편집 모드 */
-    #detail-screen.editing .slot:not(.slot-empty) { box-shadow: 0 0 0 1px rgba(0,112,74,0.3); }
-    .slot-empty {
-      background: transparent;
-      border: 1.5px dashed var(--border-strong);
+    #detail-screen.editing .slot { box-shadow: 0 0 0 1px rgba(0,112,74,0.3); }
+    /* 칸 편집 시트: 방향별 칸 추가 패드 */
+    .addpad { display: grid; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(3, 40px); gap: 6px; justify-content: center; margin: 4px 0 10px; }
+    .addpad button {
+      border: 1px solid var(--green-500); background: var(--green-50); color: var(--green-700);
+      border-radius: var(--radius-md); font-size: 18px; font-weight: 800; cursor: pointer;
     }
-    .slot-empty .slot-inner { color: var(--text-3); font-size: 18px; font-weight: 700; }
-    .slot-empty:hover { background: var(--green-50); border-color: var(--green-500); }
+    .addpad button:active { background: var(--green-100); }
+    .addpad .a-up { grid-column: 2; grid-row: 1; }
+    .addpad .a-left { grid-column: 1; grid-row: 2; }
+    .addpad .a-center { grid-column: 2; grid-row: 2; display: grid; place-items: center; font-weight: 800; color: var(--green-800); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--subtle); }
+    .addpad .a-right { grid-column: 3; grid-row: 2; }
+    .addpad .a-down { grid-column: 2; grid-row: 3; }
+    .tool-row { display: flex; gap: 8px; }
+    .tool-row .btn { flex: 1; padding: 0 8px; }
 
     /* 통로 / 출입구 */
     .area {
+      position: absolute;
       display: flex; align-items: center; justify-content: center;
       border-radius: 10px; pointer-events: none; text-align: center;
     }
+    #detail-screen.editing .area { pointer-events: auto; cursor: pointer; }
+    .slot.moving, .area.moving { box-shadow: 0 0 0 3px var(--gold); z-index: 5; }
+    .move-pad { display: none; flex-wrap: wrap; align-items: center; gap: 10px; flex: 1 1 100%; }
+    #detail-screen.moving .move-pad { display: flex; }
+    #detail-screen.moving .edit-normal { display: none; }
+    .move-pad .edit-msg { flex: 1 1 140px; }
+    .dpad { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(2, 44px); gap: 6px; }
+    .dpad button {
+      border: 1px solid var(--warning-fg); background: #fff; color: var(--warning-fg);
+      border-radius: var(--radius-md); font-size: 20px; font-weight: 800; cursor: pointer;
+    }
+    .dpad button:active { background: var(--warning-bg); }
+    .dpad .d-up { grid-column: 2; grid-row: 1; }
+    .dpad .d-left { grid-column: 1; grid-row: 2; }
+    .dpad .d-down { grid-column: 2; grid-row: 2; }
+    .dpad .d-right { grid-column: 3; grid-row: 2; }
+    .move-opts { display: flex; flex-direction: column; gap: 6px; }
     .area-road { background: var(--subtle); border: 1px dashed var(--border-strong); }
     .area-entrance { background: var(--warning-bg); border: 1px dashed #E3CB93; }
     .area-label { font-size: 12px; font-weight: 800; color: var(--text-2); line-height: 1.25; }
@@ -423,8 +467,8 @@
     .grid-dir.dir-right  { right: 14px;  top: 50%;   transform: translate(50%, -50%); }
 
     /* 미니맵 */
-    .parking-grid.mini { max-width: none; height: 100%; padding: 8px; margin: 0; }
-    .parking-grid.mini .grid-cells { height: 100%; aspect-ratio: auto; gap: 2px; }
+    .parking-grid.mini { max-width: none; height: 100%; padding: 8px; margin: 0; --g: 1px; }
+    .parking-grid.mini .grid-cells { height: 100%; aspect-ratio: auto; }
     .parking-grid.mini .slot { border-radius: 3px; cursor: default; }
     .parking-grid.mini .slot:hover { background: #fff; border-color: var(--border-strong); }
     .parking-grid.mini .slot-compact:hover { background: var(--mint); }
@@ -557,21 +601,37 @@
     /* ========================================== */
     @media (max-width: 767px) {
       .app-header h1 { font-size: 16px; }
-      .hero-banner { padding: 28px 20px; }
+      .app-header { padding-top: calc(12px + env(safe-area-inset-top)); }
+      .hero-banner { padding: 20px 20px; }
+      .hero-banner h2 { font-size: 22px; margin-bottom: 4px; }
+      .hero-banner .eyebrow { margin-bottom: 8px; }
       .hero-banner p { font-size: 13px; }
-      .users-container { gap: 16px; padding: 20px 16px 28px; }
-      .user-card { min-height: 190px; padding: 16px; }
+      .users-container { gap: 12px; padding: 16px 16px 24px; }
+      .user-card { min-height: 170px; padding: 16px; }
       .parking-info { font-size: 19px; min-height: 40px; padding: 6px 12px; }
 
-      .detail-header { grid-template-columns: auto 1fr auto; padding: 12px 16px; }
+      /* 상세 화면: 한 화면에 고정, 지도가 남는 공간을 모두 사용 */
+      #detail-screen { height: 100dvh; min-height: 0; overflow: hidden; }
+      .detail-header {
+        grid-template-columns: auto 1fr auto; padding: 8px 16px;
+        padding-top: calc(8px + env(safe-area-inset-top));
+      }
       .detail-header h2 { font-size: 16px; text-align: center; }
-      .detail-content { padding: 12px; gap: 12px; }
-      .freq-section { padding: 12px; }
-      .floor-tabs { padding: 10px 12px; gap: 6px; }
+      .detail-content { padding: 0; gap: 0; min-height: 0; max-width: none; }
+      .left-panel { border: none; border-radius: 0; box-shadow: none; min-height: 0; flex: 1; }
+      .freq-section { display: flex; align-items: center; gap: 10px; padding: 6px 12px; }
+      .freq-title { margin: 0; flex-shrink: 0; letter-spacing: .04em; }
+      .freq-list { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; flex: 1; }
+      .freq-list::-webkit-scrollbar { display: none; }
+      .freq-chip { flex-shrink: 0; height: 34px; }
+      .freq-empty { white-space: nowrap; }
+      .floor-tabs { padding: 6px 12px; gap: 6px; }
+      .floor-tab { height: 34px; }
+      .edit-bar { padding: 8px 12px; }
 
       .map-container {
         position: relative; overflow: hidden; padding: 0;
-        min-height: 62vh; touch-action: none;
+        flex: 1; min-height: 0; touch-action: none;
         user-select: none; -webkit-user-select: none;
       }
       .map-zoom-wrapper {
@@ -588,26 +648,27 @@
       .map-zoom-wrapper .grid-dir.dir-bottom { transform: translate(-50%, 50%) rotate(90deg); }
       .map-zoom-wrapper .grid-dir.dir-left   { transform: translate(-50%, -50%) rotate(90deg); }
       .map-zoom-wrapper .grid-dir.dir-right  { transform: translate(50%, -50%) rotate(90deg); }
-      .map-zoom-wrapper .slot-text { font-size: 20px; }
+      .map-zoom-wrapper .slot-text { font-size: 21px; }
       .map-zoom-wrapper .zone-label { font-size: 13px; top: 3px; left: 5px; }
       .map-zoom-wrapper .type-badge { font-size: 12px; }
-      .map-zoom-wrapper .fav-star { font-size: 14px; }
+      .map-zoom-wrapper .use-count { font-size: 12px; }
+      .edit-btn-label { display: none; }
       .map-zoom-wrapper .car-marker { font-size: 28px; }
       .map-zoom-wrapper .car-name { font-size: 13px; }
       .map-zoom-wrapper .area-label { font-size: 14px; }
       .map-zoom-wrapper .area-entrance .area-label { font-size: 20px; }
-      .map-zoom-wrapper .slot-empty .slot-inner { font-size: 26px; }
 
       /* 하단 고정 등록 바 */
       .right-panel {
-        position: sticky; bottom: 0; z-index: 20;
-        margin: 0 -12px -12px; gap: 0;
+        position: relative; z-index: 20;
+        margin: 0; gap: 0; width: 100%;
       }
+      #detail-screen.editing .right-panel { display: none; }
       .legend-section { display: none; }
       .register-section {
         flex-direction: row; align-items: center; gap: 10px;
         border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-        border-bottom: none; padding: 10px 12px;
+        border-bottom: none; padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
         box-shadow: 0 -4px 14px rgba(30,57,50,0.10);
       }
       .selection-info { flex: 1; min-width: 0; padding: 6px 10px; font-size: 12px; text-align: left; }
@@ -679,7 +740,7 @@
     <header class="detail-header">
       <button class="btn btn-ghost btn-sm back-btn" id="back-btn">← 뒤로</button>
       <h2 id="detail-title">주차 등록</h2>
-      <button class="btn btn-secondary btn-sm edit-btn" id="edit-btn">✎ 배치 편집</button>
+      <button class="btn btn-secondary btn-sm edit-btn" id="edit-btn">✎ <span class="edit-btn-label">배치&nbsp;</span>편집</button>
     </header>
 
     <div class="detail-content">
@@ -693,11 +754,27 @@
         <div class="floor-tabs" id="floor-tabs"></div>
         <!-- 배치 편집 바 -->
         <div class="edit-bar" id="edit-bar">
-          <div class="edit-msg" id="edit-msg"></div>
-          <div class="edit-actions">
+          <div class="edit-msg edit-normal" id="edit-msg"></div>
+          <div class="edit-actions edit-normal">
             <button class="btn btn-primary btn-sm" id="edit-save">저장</button>
             <button class="btn btn-ghost btn-sm" id="edit-cancel">취소</button>
+            <button class="btn btn-ghost btn-sm" id="edit-undo">↶ 되돌리기</button>
+            <button class="btn btn-ghost btn-sm" id="edit-restore" style="display:none">이전 저장본</button>
             <button class="btn btn-danger btn-sm" id="edit-reset">기본 배치로</button>
+          </div>
+          <div class="move-pad">
+            <div class="edit-msg" id="move-msg"></div>
+            <div class="dpad">
+              <button type="button" class="d-up" data-dir="up" aria-label="위로">↑</button>
+              <button type="button" class="d-left" data-dir="left" aria-label="왼쪽으로">←</button>
+              <button type="button" class="d-down" data-dir="down" aria-label="아래로">↓</button>
+              <button type="button" class="d-right" data-dir="right" aria-label="오른쪽으로">→</button>
+            </div>
+            <div class="move-opts">
+              <button type="button" class="btn btn-ghost btn-sm" id="move-scope"></button>
+              <button type="button" class="btn btn-ghost btn-sm" id="move-undo">↶ 되돌리기</button>
+              <button type="button" class="btn btn-primary btn-sm" id="move-done">완료</button>
+            </div>
           </div>
         </div>
         <!-- 주차장 배치도 -->
@@ -717,9 +794,9 @@
             <div class="legend-item"><span class="swatch ev"></span>전기차 ⚡</div>
             <div class="legend-item"><span class="swatch heesoo"></span>희수 차</div>
             <div class="legend-item"><span class="swatch chami"></span>차미 차</div>
-            <div class="legend-item"><span style="color:var(--gold)">★</span>자주 쓰는 칸</div>
+            <div class="legend-item"><span class="swatch" style="background:linear-gradient(90deg,#fff,var(--green-100))"></span>자주 간 칸</div>
           </div>
-          <p class="legend-hint">실제와 다르면 '배치 편집'에서 칸 종류를 바꾸거나 빈 곳에 칸을 추가할 수 있어요. 층마다 따로 저장돼요.</p>
+          <p class="legend-hint">실제와 다르면 '배치 편집'에서 칸 종류를 바꾸고, 줄을 옮기거나 칸을 추가할 수 있어요. 한 줄을 옮겨도 다른 줄은 그대로예요. 층마다 따로 저장돼요.</p>
         </div>
       </div>
     </div>
@@ -770,9 +847,19 @@
         <input class="input" id="cell-zone" list="zone-list" maxlength="12" autocomplete="off">
         <datalist id="zone-list"></datalist>
       </div>
-      <div class="field">
-        <label for="cell-no">번호</label>
-        <input class="input" id="cell-no" type="number" min="1" max="99" inputmode="numeric">
+      <div class="field" id="cell-tools">
+        <label>이 칸 옆에 칸 추가 (다른 줄은 움직이지 않아요)</label>
+        <div class="addpad">
+          <button type="button" class="a-up" data-dir="up" aria-label="위쪽에 추가">＋</button>
+          <button type="button" class="a-left" data-dir="left" aria-label="왼쪽에 추가">＋</button>
+          <span class="a-center" id="addpad-center"></span>
+          <button type="button" class="a-right" data-dir="right" aria-label="오른쪽에 추가">＋</button>
+          <button type="button" class="a-down" data-dir="down" aria-label="아래쪽에 추가">＋</button>
+        </div>
+        <div class="tool-row">
+          <button type="button" class="btn btn-ghost btn-sm" id="cell-move">↔ 이 줄 이동</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="cell-split">✂ 여기서 줄 나누기</button>
+        </div>
       </div>
       <div class="sheet-actions">
         <button class="btn btn-danger" id="cell-delete">삭제</button>
@@ -820,7 +907,7 @@
     const USERS = ['희수', '차미'];
     const USER_KEY = { '희수': 'heesoo', '차미': 'chami' };
     const FLOORS = ['B2', 'B3', 'B4', 'B5', 'B6'];
-    const HISTORY_MAX = 30;       // 자주 쓰는 칸 계산용 이력 보관 개수
+    const HISTORY_MAX = 60;       // 자주 쓰는 칸·이용 기록 계산용 이력 보관 개수
     const FREQ_MAX = 4;           // 자주 쓰는 칸 표시 개수
     const TYPE_LABEL = { normal: '일반', compact: '경차', ev: '전기차' };
 
@@ -836,43 +923,45 @@
     }
 
     // ============================================
-    // 3. 기본 배치 (격자: 칸 하나 = 격자 한 칸)
-    //    x = 열(0부터), y = 행(0부터)
+    // 3. 기본 배치 (주차줄 단위)
+    //    줄 = 위치(x,y) + 방향(h 가로 / v 세로) + 칸 목록. 칸 하나는 1×1.
+    //    줄끼리 행·열을 공유하지 않으므로 한 줄을 옮겨도 다른 줄은 움직이지 않음.
     //    칸 id = "구역명-번호" (기본 칸) / "c..." (새로 추가한 칸)
     // ============================================
     function buildDefaultLayout() {
-      const cells = {};
-      const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
-      const col = (x, y0, y1) => range(y0, y1).map(y => [x, y]);
-      const row = (y, x0, x1) => range(x0, x1).map(x => [x, y]);
-      const add = (zone, type, pts) => pts.forEach(([x, y], i) => {
-        const no = i + 1, id = `${zone}-${no}`;
-        cells[id] = { id, x, y, type, zone, no };
-      });
+      const strips = {};
+      let n = 0;
+      const add = (zone, type, dir, x, y, count) => {
+        const id = `s_${n++}`;
+        strips[id] = {
+          id, zone, x, y, dir,
+          slots: Array.from({ length: count }, (_, i) => ({ id: `${zone}-${i + 1}`, type, no: i + 1 }))
+        };
+      };
 
-      add('남측',       'normal',  col(0, 0, 9));
-      add('서남측',     'normal',  row(2, 2, 5));
-      add('서북측',     'normal',  row(2, 7, 10));
-      add('북측모서리', 'normal',  row(2, 11, 12));
-      add('중앙경차1',  'compact', [[6, 5]]);
-      add('중앙경차2',  'compact', [[6, 6]]);
-      add('중앙경차3',  'compact', [[7, 6]]);
-      add('중앙일반',   'normal',  row(5, 7, 9));
-      add('중앙북측',   'normal',  col(10, 5, 7));
-      add('북서측',     'normal',  col(13, 0, 1));
-      add('전기차1',    'ev',      [[13, 2]]);
-      add('전기차2',    'ev',      [[13, 3]]);
-      add('북동측',     'normal',  col(13, 4, 9));
-      add('동측',       'normal',  row(10, 1, 12));
+      add('남측',       'normal',  'v', 0, 0, 10);
+      add('서남측',     'normal',  'h', 2, 2, 4);
+      add('서북측',     'normal',  'h', 7, 2, 4);
+      add('북측모서리', 'normal',  'h', 11, 2, 2);
+      add('중앙경차1',  'compact', 'h', 6, 5, 1);
+      add('중앙경차2',  'compact', 'h', 6, 6, 1);
+      add('중앙경차3',  'compact', 'h', 7, 6, 1);
+      add('중앙일반',   'normal',  'h', 7, 5, 3);
+      add('중앙북측',   'normal',  'v', 10, 5, 3);
+      add('북서측',     'normal',  'v', 13, 0, 2);
+      add('전기차1',    'ev',      'v', 13, 2, 1);
+      add('전기차2',    'ev',      'v', 13, 3, 1);
+      add('북동측',     'normal',  'v', 13, 4, 6);
+      add('동측',       'normal',  'h', 1, 10, 12);
 
-      return {
-        cols: 14, rows: 11, cells,
+      return finalizeLayout({
+        strips,
         areas: [
           { x: 2, y: 1, w: 4, h: 1, kind: 'road',     label: '내려가는<br>길' },
           { x: 7, y: 1, w: 4, h: 1, kind: 'road',     label: '올라가는<br>길' },
           { x: 1, y: 5, w: 5, h: 2, kind: 'entrance', label: '103동<br>출입구' },
         ]
-      };
+      });
     }
 
     // ============================================
@@ -893,6 +982,9 @@
     let draftFloor = null;
     let draftDirty = false;
     let sheetCtx = null;
+    let moveCtx = null;               // 이동 모드: { kind:'strip', stripId, step } | { kind:'area', index, step }
+    let editBounds = null;            // 편집 중 표시 범위 (한 번 넓어지면 유지)
+    let backupsData = {};             // Firebase layoutBackups/{floor} — 직전 저장본
 
     // ============================================
     // 5. 레이아웃 / 기록 헬퍼
@@ -906,16 +998,91 @@
       return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
-    function normalizeLayout(raw) {
-      const out = { cols: Number(raw?.cols) || 14, rows: Number(raw?.rows) || 11, cells: {}, areas: toArray(raw?.areas) };
-      const cells = raw?.cells || {};
-      Object.keys(cells).forEach(id => {
-        const c = cells[id];
-        if (c && Number.isFinite(c.x) && Number.isFinite(c.y)) {
-          out.cells[id] = { id, x: c.x, y: c.y, type: c.type || 'normal', zone: String(c.zone ?? ''), no: Number(c.no) || 0 };
-        }
+    // 예전 형식(칸마다 x,y)을 줄(스트립) 형식으로 변환: 같은 구역에서 가로/세로로 이어진 칸을 한 줄로 묶음
+    function cellsToStrips(rawCells) {
+      const byZone = new Map();
+      Object.keys(rawCells).forEach(id => {
+        const c = rawCells[id];
+        if (!c || !Number.isFinite(c.x) || !Number.isFinite(c.y)) return;
+        const zone = String(c.zone ?? '');
+        if (!byZone.has(zone)) byZone.set(zone, []);
+        byZone.get(zone).push({ id, x: c.x, y: c.y, type: c.type || 'normal', no: Number(c.no) || 0 });
       });
-      return out;
+
+      const strips = {};
+      let n = 0;
+      byZone.forEach((list, zone) => {
+        const byPos = new Map(list.map(c => [`${c.x},${c.y}`, c]));
+        const used = new Set();
+        [...list].sort((a, b) => (a.y - b.y) || (a.x - b.x)).forEach(c => {
+          if (used.has(c.id)) return;
+          const free = k => { const o = byPos.get(k); return o && !used.has(o.id) ? o : null; };
+          const dir = free(`${c.x + 1},${c.y}`) ? 'h' : free(`${c.x},${c.y + 1}`) ? 'v' : 'h';
+          const chain = [c];
+          used.add(c.id);
+          let cur = c;
+          for (;;) {
+            const nxt = free(dir === 'h' ? `${cur.x + 1},${cur.y}` : `${cur.x},${cur.y + 1}`);
+            if (!nxt) break;
+            used.add(nxt.id); chain.push(nxt); cur = nxt;
+          }
+          const id = `s_${n++}`;
+          strips[id] = { id, zone, x: c.x, y: c.y, dir, slots: chain.map(({ id, type, no }) => ({ id, type, no })) };
+        });
+      });
+      return strips;
+    }
+
+    // 줄 목록 -> 칸 목록(cells)을 계산해 붙임. 칸 하나 = 1×1, 위치는 줄의 (x,y)에서 순번만큼 이동
+    function finalizeLayout(L) {
+      L.cells = {};
+      Object.values(L.strips).forEach(s => {
+        s.slots.forEach((sl, i) => {
+          L.cells[sl.id] = {
+            id: sl.id, type: sl.type, zone: s.zone, no: sl.no,
+            x: s.dir === 'h' ? s.x + i : s.x,
+            y: s.dir === 'h' ? s.y : s.y + i,
+            stripId: s.id, idx: i
+          };
+        });
+      });
+      return L;
+    }
+
+    // 칸·통로가 차지하는 범위
+    function layoutBounds(L) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      Object.values(L.cells).forEach(c => {
+        minX = Math.min(minX, c.x); minY = Math.min(minY, c.y);
+        maxX = Math.max(maxX, c.x + 1); maxY = Math.max(maxY, c.y + 1);
+      });
+      L.areas.forEach(a => {
+        minX = Math.min(minX, a.x); minY = Math.min(minY, a.y);
+        maxX = Math.max(maxX, a.x + a.w); maxY = Math.max(maxY, a.y + a.h);
+      });
+      return Number.isFinite(minX) ? { minX, minY, maxX, maxY } : { minX: 0, minY: 0, maxX: 1, maxY: 1 };
+    }
+
+    function normalizeLayout(raw) {
+      const areas = toArray(raw?.areas).map(a => ({
+        x: Number(a.x) || 0, y: Number(a.y) || 0, w: Number(a.w) || 1, h: Number(a.h) || 1,
+        kind: a.kind || 'road', label: a.label || ''
+      }));
+      let strips = {};
+      if (raw?.strips) {
+        const entries = Array.isArray(raw.strips) ? raw.strips.map((s, i) => [`s_${i}`, s]) : Object.entries(raw.strips);
+        entries.forEach(([id, s]) => {
+          if (!s || !Number.isFinite(Number(s.x)) || !Number.isFinite(Number(s.y))) return;
+          const slots = toArray(s.slots)
+            .filter(sl => sl && sl.id != null)
+            .map(sl => ({ id: String(sl.id), type: sl.type || 'normal', no: Number(sl.no) || 0 }));
+          if (!slots.length) return;
+          strips[id] = { id, zone: String(s.zone ?? ''), x: Number(s.x), y: Number(s.y), dir: s.dir === 'v' ? 'v' : 'h', slots };
+        });
+      } else if (raw?.cells) {
+        strips = cellsToStrips(raw.cells);
+      }
+      return finalizeLayout({ strips, areas });
     }
 
     function getLayout(floor) {
@@ -957,13 +1124,68 @@
     }
     function otherUser(user) { return user === '희수' ? '차미' : '희수'; }
 
-    // 기록의 표시용 {floor, zone, no} (배치에 칸이 있으면 배치의 이름 우선)
+    // ---- 칸 코드 (예: D7) ----
+    // 글자 = 서로 맞닿은 칸 묶음(통로로 떨어지면 다른 글자), 숫자 = 묶음 안의 순번.
+    // 순서는 휴대폰 화면(도면을 -90° 회전) 기준 위→아래, 왼→오른 읽기 순서.
+    function computeCodes(layout) {
+      const cells = Object.values(layout.cells);
+      const byPos = new Map(cells.map(c => [`${c.x},${c.y}`, c]));
+      const reading = (a, b) => (b.x - a.x) || (a.y - b.y);
+      const neighbors = c => [[1, 0], [-1, 0], [0, 1], [0, -1]]
+        .map(([dx, dy]) => byPos.get(`${c.x + dx},${c.y + dy}`)).filter(Boolean);
+
+      const seen = new Set(), groups = [];
+      [...cells].sort(reading).forEach(start => {
+        if (seen.has(start.id)) return;
+        const comp = [], stack = [start];
+        seen.add(start.id);
+        while (stack.length) {
+          const c = stack.pop();
+          comp.push(c);
+          neighbors(c).forEach(n => { if (!seen.has(n.id)) { seen.add(n.id); stack.push(n); } });
+        }
+        groups.push(comp);
+      });
+
+      const codes = {};
+      groups.forEach((comp, gi) => {
+        const letter = gi < 26 ? String.fromCharCode(65 + gi) : String.fromCharCode(65 + Math.floor(gi / 26) - 1) + String.fromCharCode(65 + gi % 26);
+        let ordered = [...comp].sort(reading);
+        const ends = comp.filter(c => neighbors(c).length <= 1);
+        const isPath = comp.length > 1 && ends.length === 2 && comp.every(c => neighbors(c).length <= 2);
+        if (isPath) {                                   // 한 줄로 이어진 묶음은 줄을 따라 순번
+          ordered = [];
+          let cur = ends.sort(reading)[0], prev = null;
+          while (cur) {
+            ordered.push(cur);
+            const next = neighbors(cur).find(n => n !== prev && !ordered.includes(n));
+            prev = cur; cur = next;
+          }
+        }
+        ordered.forEach((c, i) => { codes[c.id] = `${letter}${i + 1}`; });
+      });
+      return codes;
+    }
+
+    function codeFor(floor, slotId) {
+      return slotId ? computeCodes(activeLayout(floor))[slotId] || null : null;
+    }
+
+    function spotText(s) {
+      return s.code ? `${s.floor} · ${s.code} · ${s.zone}` : `${s.floor} · ${s.zone} ${s.no}번`;
+    }
+
+    // 기록의 표시용 {floor, zone, no, code} (배치에 칸이 있으면 배치의 이름 우선)
     function spotOf(rec) {
       const id = recSlotId(rec);
       const cell = id ? findCell(rec.floor, id) : null;
-      if (cell) return { floor: rec.floor, zone: cell.zone, no: cell.no };
+      if (cell) return { floor: rec.floor, zone: cell.zone, no: cell.no, code: codeFor(rec.floor, cell.id) };
       if (rec.slotId) return { floor: rec.floor, zone: rec.zone, no: rec.no };
       return { floor: rec.floor, zone: getZoneName(rec.zone), no: rec.slot };
+    }
+
+    function cellSpot(floor, cell) {
+      return { floor, zone: cell.zone, no: cell.no, code: codeFor(floor, cell.id) };
     }
 
     // ============================================
@@ -993,6 +1215,11 @@
           updateMainCard(name);
           if (currentUser) refreshDetail();
         });
+      });
+
+      onValue(ref(db, 'layoutBackups'), (snapshot) => {
+        backupsData = snapshot.val() || {};
+        if (editMode) updateRestoreBtn();
       });
 
       onValue(ref(db, 'layouts'), (snapshot) => {
@@ -1027,7 +1254,7 @@
       iconEl.textContent = getCarEmoji(data?.carIcon);
       if (data && data.floor) {
         const s = spotOf(data);
-        infoEl.innerHTML = `<strong>${esc(s.floor)} › ${esc(s.zone)} › ${esc(s.no)}번 칸</strong>`;
+        infoEl.innerHTML = `<strong>${esc(spotText(s))}</strong>`;
         timeEl.textContent = formatDateTime(data.registeredAt);
         renderMiniMap(minimapEl, data.floor, userName);
       } else {
@@ -1045,102 +1272,117 @@
       const layout = activeLayout(floor);
       const grid = document.createElement('div');
       grid.className = 'parking-grid' + (mini ? ' mini' : '');
-      grid.style.setProperty('--cols', layout.cols);
-      grid.style.setProperty('--rows', layout.rows);
       if (interactive && currentUser) {
         grid.style.setProperty('--sel-color', currentUser === '희수' ? 'var(--color-heesoo)' : 'var(--color-chami)');
       }
 
+      // 표시 범위: 내용에 맞춤. 편집 중에는 가장자리에 여유를 두고, 한 번 넓어진 범위는 유지(화면이 출렁이지 않게)
+      let b = layoutBounds(layout);
+      const isEditView = interactive && editMode && floor === draftFloor;
+      if (isEditView) {
+        editBounds = editBounds
+          ? {
+              minX: Math.min(editBounds.minX, b.minX - 1), minY: Math.min(editBounds.minY, b.minY - 1),
+              maxX: Math.max(editBounds.maxX, b.maxX + 1), maxY: Math.max(editBounds.maxY, b.maxY + 1)
+            }
+          : { minX: b.minX - 1, minY: b.minY - 1, maxX: b.maxX + 1, maxY: b.maxY + 1 };
+        b = editBounds;
+      }
+      const W = b.maxX - b.minX, H = b.maxY - b.minY;
+      grid.style.setProperty('--cols', W);
+      grid.style.setProperty('--rows', H);
+
       const cellsEl = document.createElement('div');
       cellsEl.className = 'grid-cells';
-      cellsEl.style.gridTemplateColumns = `repeat(${layout.cols}, 1fr)`;
-      cellsEl.style.gridTemplateRows = `repeat(${layout.rows}, 1fr)`;
+
+      // 칸·통로는 모두 자기 좌표에 절대 위치로 배치 (다른 줄과 행/열을 공유하지 않음)
+      const place = (el, x, y, w, h) => {
+        el.style.left   = `calc(${((x - b.minX) / W * 100).toFixed(4)}% + var(--g))`;
+        el.style.top    = `calc(${((y - b.minY) / H * 100).toFixed(4)}% + var(--g))`;
+        el.style.width  = `calc(${(w / W * 100).toFixed(4)}% - 2 * var(--g))`;
+        el.style.height = `calc(${(h / H * 100).toFixed(4)}% - 2 * var(--g))`;
+      };
+
+      const codes = (!mini) ? computeCodes(layout) : {};
+      const moveStripId = moveCtx && moveCtx.kind === 'strip' ? moveCtx.stripId : null;
 
       // 통로 / 출입구 영역
-      const covered = new Set();
-      layout.areas.forEach(a => {
-        for (let dx = 0; dx < a.w; dx++) for (let dy = 0; dy < a.h; dy++) covered.add(`${a.x + dx},${a.y + dy}`);
+      layout.areas.forEach((a, ai) => {
         const el = document.createElement('div');
         el.className = `area area-${a.kind}`;
-        el.style.gridColumn = `${a.x + 1} / span ${a.w}`;
-        el.style.gridRow = `${a.y + 1} / span ${a.h}`;
+        place(el, a.x, a.y, a.w, a.h);
         el.innerHTML = `<span class="area-label">${a.label || ''}</span>`;
+        if (moveCtx && moveCtx.kind === 'area' && moveCtx.index === ai) el.classList.add('moving');
+        if (isEditView) el.addEventListener('click', () => { if (!moveCtx) startMove({ kind: 'area', index: ai }); });
         cellsEl.appendChild(el);
       });
 
-      // 좌표 -> 칸, 구역별 첫 칸(라벨 표시용)
-      const byPos = {};
-      const firstOfZone = {};
-      Object.values(layout.cells).forEach(c => {
-        byPos[`${c.x},${c.y}`] = c;
-        const f = firstOfZone[c.zone];
-        if (!f || c.y < f.y || (c.y === f.y && c.x < f.x)) firstOfZone[c.zone] = c;
+      // 내 이용 기록 (히트맵)
+      let usage = null, usageMax = 1;
+      if (interactive && !mini && currentUser && !editMode) {
+        usage = usageCounts(currentUser);
+        usage.forEach(v => { if (v > usageMax) usageMax = v; });
+      }
+
+      Object.values(layout.cells).forEach(cell => {
+        const slotEl = document.createElement('div');
+        slotEl.className = `slot slot-${cell.type}`;
+        place(slotEl, cell.x, cell.y, 1, 1);
+        slotEl.dataset.slot = cell.id;
+
+        let inner = '';
+        if (!mini) {
+          const used = usage ? (usage.get(`${floor}|${cell.id}`) || 0) : 0;
+          if (used) inner += `<span class="slot-heat" style="--heat:${(0.3 + 0.7 * used / usageMax).toFixed(2)}"></span>`;
+          if (cell.idx === 0) inner += `<span class="zone-label">${esc(cell.zone)}</span>`;
+          inner += `<span class="slot-text">${esc(codes[cell.id] ?? cell.no)}</span>`;
+          if (cell.type === 'compact') inner += '<span class="type-badge">경차</span>';
+          if (cell.type === 'ev') inner += '<span class="type-badge">⚡</span>';
+          if (used > 1) inner += `<span class="use-count">${used}회</span>`;
+        }
+        if (moveStripId && cell.stripId === moveStripId) slotEl.classList.add('moving');
+
+        // 주차된 차량 마커
+        let parkedBy = null;
+        USERS.forEach(u => { if (isAt(usersData[u], floor, cell.id)) parkedBy = u; });
+        if (parkedBy) {
+          slotEl.classList.add('parked', `parked-${USER_KEY[parkedBy]}`);
+          inner += `<span class="car-marker">${getCarEmoji(usersData[parkedBy].carIcon)}<span class="car-name">${parkedBy}</span></span>`;
+        }
+
+        // 미니맵 위치 핀
+        if (mini && targetUser && isAt(usersData[targetUser], floor, cell.id)) {
+          slotEl.style.background = 'rgba(255, 71, 87, 0.9)';
+          inner += '<span class="mini-pin">📍</span>';
+        }
+
+        slotEl.innerHTML = `<div class="slot-inner">${inner}</div>`;
+
+        if (interactive && !editMode && selectedSlotId === cell.id && selectedFloor === floor) {
+          slotEl.classList.add('selected');
+        }
+
+        if (interactive) {
+          slotEl.addEventListener('click', () => {
+            if (moveCtx) return;
+            if (editMode) openCellSheet(cell);
+            else handleSlotClick(cell);
+          });
+        }
+        cellsEl.appendChild(slotEl);
       });
 
-      const favSet = (interactive && !mini && currentUser && !editMode) ? favoriteKeySet(currentUser) : new Set();
-
-      for (let y = 0; y < layout.rows; y++) {
-        for (let x = 0; x < layout.cols; x++) {
-          const key = `${x},${y}`;
-          if (covered.has(key)) continue;
-          const cell = byPos[key];
-
-          if (!cell) {
-            if (editMode && interactive) {
-              const empty = document.createElement('div');
-              empty.className = 'slot slot-empty';
-              empty.style.gridColumn = x + 1;
-              empty.style.gridRow = y + 1;
-              empty.innerHTML = '<div class="slot-inner">＋</div>';
-              empty.addEventListener('click', () => openCellSheet(null, x, y));
-              cellsEl.appendChild(empty);
-            }
-            continue;
-          }
-
-          const slotEl = document.createElement('div');
-          slotEl.className = `slot slot-${cell.type}`;
-          slotEl.style.gridColumn = x + 1;
-          slotEl.style.gridRow = y + 1;
-          slotEl.dataset.slot = cell.id;
-
-          let inner = '';
-          if (!mini) {
-            if (firstOfZone[cell.zone] === cell) inner += `<span class="zone-label">${esc(cell.zone)}</span>`;
-            inner += `<span class="slot-text">${esc(cell.no)}</span>`;
-            if (cell.type === 'compact') inner += '<span class="type-badge">경차</span>';
-            if (cell.type === 'ev') inner += '<span class="type-badge">⚡</span>';
-            if (favSet.has(`${floor}|${cell.id}`)) inner += '<span class="fav-star">★</span>';
-          }
-
-          // 주차된 차량 마커
-          let parkedBy = null;
-          USERS.forEach(u => { if (isAt(usersData[u], floor, cell.id)) parkedBy = u; });
-          if (parkedBy) {
-            slotEl.classList.add('parked', `parked-${USER_KEY[parkedBy]}`);
-            inner += `<span class="car-marker">${getCarEmoji(usersData[parkedBy].carIcon)}<span class="car-name">${parkedBy}</span></span>`;
-          }
-
-          // 미니맵 위치 핀
-          if (mini && targetUser && isAt(usersData[targetUser], floor, cell.id)) {
-            slotEl.style.background = 'rgba(255, 71, 87, 0.9)';
-            inner += '<span class="mini-pin">📍</span>';
-          }
-
-          slotEl.innerHTML = `<div class="slot-inner">${inner}</div>`;
-
-          if (interactive && !editMode && selectedSlotId === cell.id && selectedFloor === floor) {
-            slotEl.classList.add('selected');
-          }
-
-          if (interactive) {
-            slotEl.addEventListener('click', () => {
-              if (editMode) openCellSheet(cell);
-              else handleSlotClick(cell);
-            });
-          }
-          cellsEl.appendChild(slotEl);
-        }
+      // 편집 중: 빈 곳(점)을 탭하면 그 칸 자리에 새 칸 추가 (점 격자에 맞춰 정렬)
+      if (isEditView) {
+        cellsEl.classList.add('edit-surface');
+        cellsEl.addEventListener('click', (e) => {
+          if (e.target !== cellsEl || moveCtx) return;
+          const px = b.minX + e.offsetX / (cellsEl.clientWidth / W);
+          const py = b.minY + e.offsetY / (cellsEl.clientHeight / H);
+          const x = b.minX + Math.floor(px - b.minX), y = b.minY + Math.floor(py - b.minY);
+          if (findBlocker(layout, [{ x, y, w: 1, h: 1 }])) return;   // 칸 사이 틈을 잘못 누른 경우 무시
+          openCellSheet(null, x, y);
+        });
       }
 
       grid.appendChild(cellsEl);
@@ -1195,7 +1437,7 @@
       if (cell) {
         const other = otherUser(currentUser);
         const swap = isAt(usersData[other], selectedFloor, cell.id);
-        infoEl.innerHTML = `선택: <strong>${esc(selectedFloor)} › ${esc(cell.zone)} › ${esc(cell.no)}번 칸</strong>` +
+        infoEl.innerHTML = `선택: <strong>${esc(spotText(cellSpot(selectedFloor, cell)))}</strong>` +
           (swap ? `<span class="swap-note">${other} 차가 있던 칸 — 등록하면 ${currentUser} 차로 바뀝니다</span>` : '');
         btnEl.disabled = false;
         btnEl.className = `register-btn active ${USER_KEY[currentUser]}`;
@@ -1218,7 +1460,7 @@
       if (takeover) {
         const ok = await confirmDialog(
           '주차 차량 변경',
-          `${selectedFloor} › ${cell.zone} › ${cell.no}번 칸에는 ${other} 차가 등록되어 있어요.\n${currentUser} 차로 바꿀까요? (${other}은 미등록 상태가 됩니다)`,
+          `${spotText(cellSpot(selectedFloor, cell))} 칸에는 ${other} 차가 등록되어 있어요.\n${currentUser} 차로 바꿀까요? (${other}은 미등록 상태가 됩니다)`,
           '바꾸기'
         );
         if (!ok) return;
@@ -1285,9 +1527,18 @@
         .sort((a, b) => b.count - a.count || a.firstIdx - b.firstIdx)
         .slice(0, FREQ_MAX);
     }
-    function favoriteKeySet(user) {
-      return new Set(favoriteList(user).filter(e => e.count > 1).map(e => e.key));
+    // 칸별 주차 횟수 (키: "층|칸id") — 히트맵용
+    function usageCounts(user) {
+      const counts = new Map();
+      toArray(usageHistory(user)).forEach(h => {
+        const id = recSlotId(h);
+        if (!h.floor || !id) return;
+        const k = `${h.floor}|${id}`;
+        counts.set(k, (counts.get(k) || 0) + 1);
+      });
+      return counts;
     }
+    function usageHistory(user) { return usersData[user]?.history; }
 
     function renderFrequent() {
       const box = document.getElementById('freq-list');
@@ -1300,7 +1551,7 @@
       list.forEach(e => {
         const btn = document.createElement('button');
         btn.className = 'freq-chip' + (e.floor === selectedFloor && e.slotId === selectedSlotId ? ' active' : '');
-        btn.innerHTML = `${esc(e.floor)} · ${esc(e.cell.zone)} ${esc(e.cell.no)}` +
+        btn.innerHTML = esc(spotText(cellSpot(e.floor, e.cell))) +
           (e.count > 1 ? ` <span class="cnt">${e.count}회</span>` : '') +
           (e.latest ? ' <span class="badge">최근</span>' : '');
         btn.addEventListener('click', () => {
@@ -1325,10 +1576,10 @@
       selectedFloor  = usersData[userName]?.floor || 'B2';
       selectedSlotId = null;
       mapView.scale = null; mapView.posX = 0; mapView.posY = 0;
-      editMode = false; draftLayout = null;
+      editMode = false; draftLayout = null; moveCtx = null;
 
       document.getElementById('main-screen').classList.add('hidden');
-      document.getElementById('detail-screen').classList.remove('hidden', 'editing');
+      document.getElementById('detail-screen').classList.remove('hidden', 'editing', 'moving');
       document.getElementById('detail-title').textContent = `${userName}의 주차 등록`;
       window.scrollTo(0, 0);
 
@@ -1341,9 +1592,9 @@
     function goToMain() {
       currentUser    = null;
       selectedSlotId = null;
-      editMode = false; draftLayout = null;
+      editMode = false; draftLayout = null; moveCtx = null;
       document.getElementById('detail-screen').classList.add('hidden');
-      document.getElementById('detail-screen').classList.remove('editing');
+      document.getElementById('detail-screen').classList.remove('editing', 'moving');
       document.getElementById('main-screen').classList.remove('hidden');
     }
 
@@ -1380,16 +1631,42 @@
     // 13. 배치 편집
     // ============================================
     function cloneLayout(l) {
-      return JSON.parse(JSON.stringify(l));
+      return finalizeLayout(JSON.parse(JSON.stringify({ strips: l.strips, areas: l.areas })));
+    }
+
+    function newId(prefix) {
+      return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    }
+
+    // 편집 중 되돌리기 (편집 세션 동안 유지)
+    let undoStack = [];
+    function pushUndo() {
+      undoStack.push(cloneLayout(draftLayout));
+      if (undoStack.length > 50) undoStack.shift();
+    }
+    function undoEdit() {
+      if (!draftLayout) return;
+      if (!undoStack.length) { showToast('되돌릴 작업이 없어요'); return; }
+      draftLayout = undoStack.pop();
+      draftDirty = true;
+      validateMoveCtx();
+      renderDetailMap();
+    }
+
+    function updateRestoreBtn() {
+      const btn = document.getElementById('edit-restore');
+      btn.style.display = (editMode && backupsData[draftFloor || selectedFloor]) ? '' : 'none';
     }
 
     function setEditUI(on) {
       editMode = on;
+      editBounds = null;
       document.getElementById('detail-screen').classList.toggle('editing', on);
       if (on) {
         document.getElementById('edit-msg').innerHTML =
-          `<strong>${selectedFloor} 배치 편집 중</strong><br>칸을 탭해 종류·이름을 바꾸고, 빈 곳(＋)을 탭해 칸을 추가하세요. 이 층에만 적용돼요.`;
+          `<strong>${selectedFloor} 배치 편집 중</strong><br>칸·통로를 탭해 수정/이동하고, 빈 곳을 탭해 새 칸을 추가하세요. 한 줄을 옮겨도 다른 줄은 움직이지 않아요.`;
       }
+      updateRestoreBtn();
     }
 
     function startEdit() {
@@ -1397,10 +1674,19 @@
       draftFloor = selectedFloor;
       draftLayout = cloneLayout(getLayout(selectedFloor));
       draftDirty = false;
+      undoStack = [];
+      moveCtx = null;
       selectedSlotId = null;
       setEditUI(true);
       renderDetailMap();
       updateSelectionInfo();
+    }
+
+    function leaveEdit() {
+      draftLayout = null;
+      moveCtx = null;
+      document.getElementById('detail-screen').classList.remove('moving');
+      setEditUI(false);
     }
 
     async function cancelEdit() {
@@ -1408,24 +1694,141 @@
         const ok = await confirmDialog('편집 취소', '저장하지 않은 수정이 사라집니다. 취소할까요?', '취소하기');
         if (!ok) return;
       }
-      draftLayout = null;
-      setEditUI(false);
+      leaveEdit();
       refreshDetail();
+    }
+
+    // ---- 줄 이동 ----
+    function isMobileView() { return window.innerWidth < 768; }
+
+    // 화면 기준 방향 -> 좌표 변화 (모바일은 도면이 -90° 회전돼 있음)
+    function dirDelta(dir) {
+      if (isMobileView()) return { right: [0, 1], left: [0, -1], up: [1, 0], down: [-1, 0] }[dir];
+      return { right: [1, 0], left: [-1, 0], up: [0, -1], down: [0, 1] }[dir];
+    }
+
+    function boxesOverlap(a, b) {
+      const e = 1e-6;
+      return a.x < b.x + b.w - e && b.x < a.x + a.w - e && a.y < b.y + b.h - e && b.y < a.y + a.h - e;
+    }
+
+    // boxes 가 다른 칸/통로와 겹치면 그 이름을, 아니면 null
+    function findBlocker(L, boxes, ignoreStripId, ignoreArea) {
+      for (const c of Object.values(L.cells)) {
+        if (ignoreStripId && c.stripId === ignoreStripId) continue;
+        const cb = { x: c.x, y: c.y, w: 1, h: 1 };
+        if (boxes.some(b => boxesOverlap(b, cb))) return c.zone;
+      }
+      for (const a of L.areas) {
+        if (a === ignoreArea) continue;
+        if (boxes.some(b => boxesOverlap(b, a))) return (a.label || '통로').replace(/<br>/g, '');
+      }
+      return null;
+    }
+
+    function validateMoveCtx() {
+      if (!moveCtx) return;
+      const ok = moveCtx.kind === 'strip' ? !!draftLayout?.strips[moveCtx.stripId] : !!draftLayout?.areas[moveCtx.index];
+      if (!ok) {
+        moveCtx = null;
+        document.getElementById('detail-screen').classList.remove('moving');
+      } else {
+        updateMoveUI();
+      }
+    }
+
+    function updateMoveUI() {
+      if (!moveCtx || !draftLayout) return;
+      let name;
+      if (moveCtx.kind === 'strip') {
+        const s = draftLayout.strips[moveCtx.stripId];
+        name = `${s.zone} 줄 (${s.slots.length}칸)`;
+      } else {
+        name = (draftLayout.areas[moveCtx.index].label || '통로').replace(/<br>/g, ' ');
+      }
+      document.getElementById('move-scope').textContent = `이동 단위 ${moveCtx.step}칸`;
+      document.getElementById('move-msg').innerHTML =
+        `<strong>${esc(name)} 이동 중</strong><br>화살표로 옮겨요. 다른 줄은 움직이지 않아요.`;
+    }
+
+    function startMove(ctx) {
+      closeCellSheet();
+      moveCtx = { ...ctx, step: 1 };
+      document.getElementById('detail-screen').classList.add('moving');
+      updateMoveUI();
+      renderDetailMap();
+    }
+
+    function endMove() {
+      moveCtx = null;
+      document.getElementById('detail-screen').classList.remove('moving');
+      renderDetailMap();
+    }
+
+    function moveBy(dir) {
+      if (!moveCtx || !draftLayout) return;
+      const [ux, uy] = dirDelta(dir);
+      const dx = ux * moveCtx.step, dy = uy * moveCtx.step;
+      const L = draftLayout;
+      let boxes, apply, ignoreStrip = null, ignoreArea = null;
+
+      if (moveCtx.kind === 'strip') {
+        const s = L.strips[moveCtx.stripId];
+        if (!s) return;
+        boxes = s.slots.map((_, i) => ({
+          x: (s.dir === 'h' ? s.x + i : s.x) + dx,
+          y: (s.dir === 'h' ? s.y : s.y + i) + dy,
+          w: 1, h: 1
+        }));
+        ignoreStrip = s.id;
+        apply = () => { s.x += dx; s.y += dy; };
+      } else {
+        const a = L.areas[moveCtx.index];
+        if (!a) return;
+        boxes = [{ x: a.x + dx, y: a.y + dy, w: a.w, h: a.h }];
+        ignoreArea = a;
+        apply = () => { a.x += dx; a.y += dy; };
+      }
+
+      const blocker = findBlocker(L, boxes, ignoreStrip, ignoreArea);
+      if (blocker) { showToast(`'${blocker}'에 막혀서 옮길 수 없어요`); return; }
+
+      pushUndo();
+      apply();
+      finalizeLayout(L);
+      draftDirty = true;
+      renderDetailMap();
+    }
+
+    // ---- 저장 / 복구 ----
+    function serializeLayout(L) {
+      const strips = {};
+      Object.values(L.strips).forEach(s => {
+        strips[s.id] = {
+          zone: s.zone, x: s.x, y: s.y, dir: s.dir,
+          slots: s.slots.map(sl => ({ id: sl.id, type: sl.type, no: sl.no }))
+        };
+      });
+      return {
+        strips,
+        areas: L.areas.map(a => ({ x: a.x, y: a.y, w: a.w, h: a.h, kind: a.kind, label: a.label || '' }))
+      };
     }
 
     async function saveEdit() {
       if (!db || !draftLayout) return;
-      const cells = {};
-      Object.values(draftLayout.cells).forEach(c => { cells[c.id] = { x: c.x, y: c.y, type: c.type, zone: c.zone, no: c.no }; });
+      const data = serializeLayout(draftLayout);
       try {
-        await set(ref(db, `layouts/${draftFloor}`), {
-          cols: draftLayout.cols, rows: draftLayout.rows,
-          cells, areas: draftLayout.areas,
-          updatedAt: new Date().toISOString()
-        });
-        layoutsData[draftFloor] = { cols: draftLayout.cols, rows: draftLayout.rows, cells, areas: draftLayout.areas };
-        draftLayout = null;
-        setEditUI(false);
+        const prev = layoutsData[draftFloor];
+        if (prev) {
+          // 직전 저장본 보관 (실패해도 저장은 계속)
+          try { await set(ref(db, `layoutBackups/${draftFloor}`), prev); }
+          catch (e) { console.warn('이전 저장본 보관 실패:', e); }
+        }
+        await set(ref(db, `layouts/${draftFloor}`), { ...data, updatedAt: new Date().toISOString() });
+        layoutsData[draftFloor] = data;
+        if (prev) backupsData[draftFloor] = prev;
+        leaveEdit();
         renderFloorTabs();
         refreshDetail();
         showToast('✅ 배치가 저장되었습니다');
@@ -1438,15 +1841,32 @@
     async function resetEdit() {
       const ok = await confirmDialog('기본 배치로', `${draftFloor}의 수정 내용을 지우고 처음 배치로 되돌립니다.\n(저장을 눌러야 적용돼요)`, '되돌리기');
       if (!ok) return;
+      pushUndo();
       draftLayout = buildDefaultLayout();
       draftDirty = true;
+      validateMoveCtx();
+      renderDetailMap();
+    }
+
+    async function restoreBackup() {
+      const raw = backupsData[draftFloor];
+      if (!raw) { showToast('불러올 이전 저장본이 없어요'); return; }
+      const ok = await confirmDialog('이전 저장본으로', `${draftFloor}의 직전 저장 배치를 불러옵니다.\n(저장을 눌러야 적용돼요)`, '불러오기');
+      if (!ok) return;
+      pushUndo();
+      draftLayout = normalizeLayout(raw);
+      draftDirty = true;
+      validateMoveCtx();
       renderDetailMap();
     }
 
     // --- 칸 편집 시트 ---
-    function nextNoFor(zone) {
+    // 내부용 번호 (화면에는 칸 코드가 표시됨) — 같은 구역 이름 안에서 겹치지 않게만 부여
+    function nextNoFor(zone, exceptStripId) {
       let max = 0;
-      Object.values(draftLayout.cells).forEach(c => { if (c.zone === zone && c.no > max) max = c.no; });
+      Object.values(draftLayout.cells).forEach(c => {
+        if (c.stripId !== exceptStripId && c.zone === zone && c.no > max) max = c.no;
+      });
       return max + 1;
     }
 
@@ -1457,7 +1877,6 @@
 
     function openCellSheet(cell, x, y) {
       const zoneInput = document.getElementById('cell-zone');
-      const noInput = document.getElementById('cell-no');
       const dl = document.getElementById('zone-list');
       dl.innerHTML = '';
       [...new Set(Object.values(draftLayout.cells).map(c => c.zone))].forEach(z => {
@@ -1466,22 +1885,24 @@
 
       if (cell) {
         sheetCtx = { mode: 'edit', id: cell.id, type: cell.type };
-        document.getElementById('cell-sheet-title').textContent = `${cell.zone} ${cell.no}번 칸 수정`;
+        const code = computeCodes(draftLayout)[cell.id];
+        document.getElementById('cell-sheet-title').textContent = `${code ? code + ' · ' : ''}${cell.zone} 칸 수정`;
         zoneInput.value = cell.zone;
-        noInput.value = cell.no;
+        document.getElementById('addpad-center').textContent = code || '이 칸';
       } else {
-        // 이웃한 칸의 구역을 기본값으로
-        const nb = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]
-          .map(([nx, ny]) => Object.values(draftLayout.cells).find(c => c.x === nx && c.y === ny))
-          .find(Boolean);
-        const zone = nb ? nb.zone : '';
-        sheetCtx = { mode: 'add', x, y, type: 'normal' };
-        document.getElementById('cell-sheet-title').textContent = '여기에 칸 추가';
-        zoneInput.value = zone;
-        noInput.value = zone ? nextNoFor(zone) : 1;
+        // 가까운 칸의 구역을 기본값으로
+        let near = null, best = 1.6;
+        Object.values(draftLayout.cells).forEach(c => {
+          const d = Math.hypot(c.x - x, c.y - y);
+          if (d < best) { best = d; near = c; }
+        });
+        sheetCtx = { mode: 'add', x, y, type: near ? near.type : 'normal' };
+        document.getElementById('cell-sheet-title').textContent = '여기에 새 칸 추가';
+        zoneInput.value = near ? near.zone : '';
       }
       setSheetType(sheetCtx.type);
       document.getElementById('cell-delete').style.display = cell ? '' : 'none';
+      document.getElementById('cell-tools').style.display = cell ? '' : 'none';
       document.getElementById('cell-sheet').classList.remove('hidden');
     }
 
@@ -1490,23 +1911,106 @@
       sheetCtx = null;
     }
 
-    function applyCellSheet() {
+    // 시트의 종류/구역 입력을 draft에 반영 (edit 모드). 성공 여부를 반환
+    function commitEditFields() {
       const zone = document.getElementById('cell-zone').value.trim();
-      const no = parseInt(document.getElementById('cell-no').value, 10);
-      if (!zone) { showToast('구역 이름을 입력해 주세요'); return; }
-      if (!(no >= 1)) { showToast('번호는 1 이상이어야 해요'); return; }
-      const dup = Object.values(draftLayout.cells).some(c => c.zone === zone && c.no === no && c.id !== sheetCtx.id);
-      if (dup) { showToast('같은 구역에 이미 있는 번호예요'); return; }
-
-      if (sheetCtx.mode === 'add') {
-        const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-        draftLayout.cells[id] = { id, x: sheetCtx.x, y: sheetCtx.y, type: sheetCtx.type, zone, no };
-      } else {
-        Object.assign(draftLayout.cells[sheetCtx.id], { type: sheetCtx.type, zone, no });
+      if (!zone) { showToast('구역 이름을 입력해 주세요'); return false; }
+      const cell = draftLayout.cells[sheetCtx.id];
+      if (!cell) return false;
+      const strip = draftLayout.strips[cell.stripId];
+      const slot = strip.slots[cell.idx];
+      if (strip.zone === zone && slot.type === sheetCtx.type) return true;
+      pushUndo();
+      if (strip.zone !== zone) {
+        let n = nextNoFor(zone, strip.id) - 1;
+        strip.slots.forEach(sl => { sl.no = ++n; });
+        strip.zone = zone;
       }
+      slot.type = sheetCtx.type;
+      finalizeLayout(draftLayout);
+      draftDirty = true;
+      return true;
+    }
+
+    function applyCellSheet() {
+      if (!sheetCtx) return;
+      if (sheetCtx.mode === 'add') {
+        const zone = document.getElementById('cell-zone').value.trim();
+        if (!zone) { showToast('구역 이름을 입력해 주세요'); return; }
+        const blocker = findBlocker(draftLayout, [{ x: sheetCtx.x, y: sheetCtx.y, w: 1, h: 1 }]);
+        if (blocker) { showToast(`그 자리에는 이미 '${blocker}'이(가) 있어요`); return; }
+        pushUndo();
+        const id = newId('st');
+        draftLayout.strips[id] = {
+          id, zone, x: sheetCtx.x, y: sheetCtx.y, dir: 'h',
+          slots: [{ id: newId('c'), type: sheetCtx.type, no: nextNoFor(zone) }]
+        };
+        finalizeLayout(draftLayout);
+        draftDirty = true;
+      } else if (!commitEditFields()) {
+        return;
+      }
+      closeCellSheet();
+      renderDetailMap();
+    }
+
+    // 이 칸의 (화면 기준) 방향 옆에 칸 추가 — 줄 끝이면 줄이 길어지고, 아니면 새 줄. 다른 줄은 움직이지 않음
+    function addCellBeside(dir) {
+      if (!sheetCtx || sheetCtx.mode !== 'edit') return;
+      if (!commitEditFields()) return;
+      const L = draftLayout;
+      const cell = L.cells[sheetCtx.id];
+      const strip = L.strips[cell.stripId];
+      const [dx, dy] = dirDelta(dir);
+      const nx = cell.x + dx, ny = cell.y + dy;
+      const blocker = findBlocker(L, [{ x: nx, y: ny, w: 1, h: 1 }]);
+      if (blocker) { showToast(`그 자리에는 이미 '${blocker}'이(가) 있어요`); return; }
+
+      const axis = dx !== 0 ? 'h' : 'v';
+      const forward = dx + dy > 0;
+      const slot = { id: newId('c'), type: cell.type, no: nextNoFor(strip.zone) };
+      pushUndo();
+      if (strip.slots.length === 1) {                       // 한 칸짜리 줄: 방향을 정하며 이어 붙임
+        strip.dir = axis;
+        if (forward) strip.slots.push(slot);
+        else { strip.slots.unshift(slot); strip.x = nx; strip.y = ny; }
+      } else if (axis === strip.dir && forward && cell.idx === strip.slots.length - 1) {
+        strip.slots.push(slot);
+      } else if (axis === strip.dir && !forward && cell.idx === 0) {
+        strip.slots.unshift(slot); strip.x = nx; strip.y = ny;
+      } else {                                              // 줄 옆에 붙는 새 줄
+        const id = newId('st');
+        L.strips[id] = { id, zone: strip.zone, x: nx, y: ny, dir: axis, slots: [slot] };
+      }
+      finalizeLayout(L);
       draftDirty = true;
       closeCellSheet();
       renderDetailMap();
+    }
+
+    // 이 칸부터 뒤쪽을 새 줄로 분리하고 바로 이동 모드로 — 줄 중간에 통로를 낼 때
+    function splitStripHere() {
+      if (!sheetCtx || sheetCtx.mode !== 'edit') return;
+      if (!commitEditFields()) return;
+      const L = draftLayout;
+      const cell = L.cells[sheetCtx.id];
+      const strip = L.strips[cell.stripId];
+      if (cell.idx === 0) { showToast('줄의 첫 칸이에요. 나누려는 지점의 칸을 골라 주세요'); return; }
+      pushUndo();
+      const tail = strip.slots.splice(cell.idx);
+      const ns = { id: newId('st'), zone: strip.zone, dir: strip.dir, x: cell.x, y: cell.y, slots: tail };
+      L.strips[ns.id] = ns;
+      finalizeLayout(L);
+      draftDirty = true;
+      startMove({ kind: 'strip', stripId: ns.id });
+      showToast('여기서부터 새 줄로 나뉘었어요. 화살표로 옮겨 통로를 만드세요');
+    }
+
+    function moveStripFromSheet() {
+      if (!sheetCtx || sheetCtx.mode !== 'edit') return;
+      if (!commitEditFields()) return;
+      const cell = draftLayout.cells[sheetCtx.id];
+      startMove({ kind: 'strip', stripId: cell.stripId });
     }
 
     function deleteCellFromSheet() {
@@ -1515,7 +2019,27 @@
         showToast('차가 등록된 칸은 삭제할 수 없어요');
         return;
       }
-      delete draftLayout.cells[id];
+      const L = draftLayout;
+      const cell = L.cells[id];
+      const strip = L.strips[cell.stripId];
+      pushUndo();
+      const before = strip.slots.slice(0, cell.idx);
+      const after = strip.slots.slice(cell.idx + 1);
+      const posOf = k => strip.dir === 'h' ? { x: strip.x + k, y: strip.y } : { x: strip.x, y: strip.y + k };
+      if (before.length) {
+        if (after.length) {                                  // 줄 중간 삭제: 둘로 나뉨
+          const p = posOf(cell.idx + 1);
+          const ns = { id: newId('st'), zone: strip.zone, dir: strip.dir, x: p.x, y: p.y, slots: after };
+          L.strips[ns.id] = ns;
+        }
+        strip.slots = before;
+      } else if (after.length) {
+        const p = posOf(1);
+        strip.slots = after; strip.x = p.x; strip.y = p.y;
+      } else {
+        delete L.strips[strip.id];
+      }
+      finalizeLayout(L);
       draftDirty = true;
       closeCellSheet();
       renderDetailMap();
@@ -1645,12 +2169,23 @@
     document.querySelectorAll('#cell-type-group button').forEach(b => {
       b.addEventListener('click', () => setSheetType(b.dataset.type));
     });
-    document.getElementById('cell-zone').addEventListener('input', (e) => {
-      if (sheetCtx && sheetCtx.mode === 'add') {
-        const z = e.target.value.trim();
-        if (z) document.getElementById('cell-no').value = nextNoFor(z);
-      }
+    document.getElementById('cell-move').addEventListener('click', moveStripFromSheet);
+    document.getElementById('cell-split').addEventListener('click', splitStripHere);
+    document.querySelectorAll('.addpad button').forEach(b => {
+      b.addEventListener('click', () => addCellBeside(b.dataset.dir));
     });
+    document.getElementById('edit-undo').addEventListener('click', undoEdit);
+    document.getElementById('edit-restore').addEventListener('click', restoreBackup);
+    document.querySelectorAll('.dpad button').forEach(b => {
+      b.addEventListener('click', () => moveBy(b.dataset.dir));
+    });
+    document.getElementById('move-scope').addEventListener('click', () => {
+      if (!moveCtx) return;
+      moveCtx.step = moveCtx.step === 1 ? 0.5 : 1;
+      updateMoveUI();
+    });
+    document.getElementById('move-done').addEventListener('click', endMove);
+    document.getElementById('move-undo').addEventListener('click', undoEdit);
     document.getElementById('cell-ok').addEventListener('click', applyCellSheet);
     document.getElementById('cell-cancel').addEventListener('click', closeCellSheet);
     document.getElementById('cell-delete').addEventListener('click', deleteCellFromSheet);
