@@ -438,11 +438,24 @@
       border-radius: 10px; pointer-events: none; text-align: center;
     }
     #detail-screen.editing .area { pointer-events: auto; cursor: pointer; }
-    .slot.moving, .area.moving { box-shadow: 0 0 0 3px var(--gold); z-index: 5; }
-    .move-pad { display: none; flex-wrap: wrap; align-items: center; gap: 10px; flex: 1 1 100%; }
+    .move-pad, .range-pad { display: none; flex-wrap: wrap; align-items: center; gap: 10px; flex: 1 1 100%; }
     #detail-screen.moving .move-pad { display: flex; }
-    #detail-screen.moving .edit-normal { display: none; }
-    .move-pad .edit-msg { flex: 1 1 140px; }
+    #detail-screen.ranging .range-pad { display: flex; }
+    #detail-screen.moving .edit-normal, #detail-screen.ranging .edit-normal { display: none; }
+    .move-pad .edit-msg, .range-pad .edit-msg { flex: 1 1 140px; }
+    .range-warn { color: var(--error-fg); }
+    .dpad button:disabled { opacity: .35; cursor: not-allowed; }
+    /* 범위 지정 중에는 칸·통로가 탭을 가로채지 않고 모두 지도 표면으로 전달 */
+    #detail-screen.ranging .slot, #detail-screen.ranging .area { pointer-events: none; }
+    .area.ranging-old { opacity: .35; }
+    .range-preview {
+      position: absolute; z-index: 6; pointer-events: none; border-radius: 10px;
+      background: rgba(0, 112, 74, 0.22); border: 2px solid var(--green-500);
+    }
+    .range-preview.bad { background: rgba(192, 57, 43, 0.22); border-color: var(--error-fg); }
+    /* 함께 옮길 줄·통로 선택 / 막는 것 표시 */
+    .slot.sel-item, .area.sel-item { outline: 3px dashed #E07B39; outline-offset: 1px; z-index: 5; }
+    .slot.blocker, .area.blocker { outline: 3px dashed var(--error-fg); outline-offset: 1px; z-index: 6; }
     .dpad { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(2, 44px); gap: 6px; }
     .dpad button {
       border: 1px solid var(--warning-fg); background: #fff; color: var(--warning-fg);
@@ -454,14 +467,20 @@
     .dpad .d-down { grid-column: 2; grid-row: 2; }
     .dpad .d-right { grid-column: 3; grid-row: 2; }
     .move-opts { display: flex; flex-direction: column; gap: 6px; }
-    /* 함께 밀기 미리보기 */
-    .slot.push-preview, .area.push-preview { outline: 3px dashed #E07B39; outline-offset: 1px; z-index: 5; }
-    .push-confirm {
-      display: none; flex: 1 1 100%; flex-wrap: wrap; align-items: center; gap: 8px;
-      padding: 8px 10px; background: #fff; border: 1.5px dashed #E07B39; border-radius: var(--radius-md);
+    /* 저장 시 적용할 층 선택 */
+    .floor-apply-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .floor-row {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--subtle); cursor: pointer;
     }
-    #detail-screen.push-pending .push-confirm { display: flex; }
-    .push-confirm .push-msg { flex: 1 1 160px; font-size: 13px; font-weight: 700; color: #B85C1E; line-height: 1.4; }
+    .floor-row input { width: 20px; height: 20px; accent-color: var(--green-500); flex-shrink: 0; }
+    .floor-row .floor-name { font-size: 16px; font-weight: 800; min-width: 34px; }
+    .floor-row .floor-note { font-size: 12px; color: var(--text-2); line-height: 1.35; }
+    .tool-label { display: block; margin: 10px 0 6px; font-size: 12px; font-weight: 800; color: var(--text-2); letter-spacing: .04em; }
+    .sheet-hint { font-size: 12px; color: var(--text-3); line-height: 1.45; margin-top: 4px; }
+    textarea.input { resize: none; }
+    .selpad button { border-color: #E07B39; background: #FDF1E8; color: #B85C1E; }
+    .selpad button:active { background: #F8DEC9; }
     .area-road { background: var(--subtle); border: 1px dashed var(--border-strong); }
     .area-entrance { background: var(--warning-bg); border: 1px dashed #E3CB93; }
     .area-label { font-size: 12px; font-weight: 800; color: var(--text-2); line-height: 1.25; }
@@ -770,6 +789,7 @@
             <button class="btn btn-ghost btn-sm" id="edit-restore" style="display:none">이전 저장본</button>
             <button class="btn btn-danger btn-sm" id="edit-reset">기본 배치로</button>
           </div>
+          <!-- 선택 모드: 선택한 줄·통로를 한꺼번에 이동 -->
           <div class="move-pad">
             <div class="edit-msg" id="move-msg"></div>
             <div class="dpad">
@@ -779,15 +799,18 @@
               <button type="button" class="d-right" data-dir="right" aria-label="오른쪽으로">→</button>
             </div>
             <div class="move-opts">
-              <button type="button" class="btn btn-ghost btn-sm" id="move-mode" style="display:none"></button>
               <button type="button" class="btn btn-ghost btn-sm" id="move-scope"></button>
               <button type="button" class="btn btn-ghost btn-sm" id="move-undo">↶ 되돌리기</button>
               <button type="button" class="btn btn-primary btn-sm" id="move-done">완료</button>
             </div>
-            <div class="push-confirm">
-              <span class="push-msg" id="push-msg"></span>
-              <button type="button" class="btn btn-primary btn-sm" id="push-ok">함께 밀기</button>
-              <button type="button" class="btn btn-ghost btn-sm" id="push-cancel">취소</button>
+          </div>
+          <!-- 범위 지정 모드: 시작 칸 → 끝 칸을 탭해 통로/출입구 범위를 정함 -->
+          <div class="range-pad">
+            <div class="edit-msg" id="range-msg"></div>
+            <div class="move-opts">
+              <button type="button" class="btn btn-primary btn-sm" id="range-ok" disabled>완료</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="range-redo">다시 지정</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="range-cancel">취소</button>
             </div>
           </div>
         </div>
@@ -810,7 +833,7 @@
             <div class="legend-item"><span class="swatch chami"></span>차미 차</div>
             <div class="legend-item"><span class="swatch" style="background:linear-gradient(90deg,#fff,var(--green-100))"></span>자주 간 칸</div>
           </div>
-          <p class="legend-hint">실제와 다르면 '배치 편집'에서 칸 종류를 바꾸고, 줄을 옮기거나 칸을 추가할 수 있어요. 한 줄을 옮겨도 다른 줄은 그대로예요. 층마다 따로 저장돼요.</p>
+          <p class="legend-hint">실제와 다르면 '배치 편집'에서 칸 종류를 바꾸고, 옮길 줄·통로를 선택해 이동하거나 통로·출입구 범위를 지정할 수 있어요. 선택하지 않은 줄은 그대로예요. 저장할 때 적용할 층을 고를 수 있어요.</p>
         </div>
       </div>
     </div>
@@ -848,18 +871,28 @@
   <div id="cell-sheet" class="modal-overlay sheet hidden">
     <div class="modal-content">
       <h3 id="cell-sheet-title">칸 편집</h3>
-      <div class="field">
-        <label>주차칸 종류</label>
-        <div class="pill-group" id="cell-type-group">
-          <button type="button" data-type="normal">일반</button>
-          <button type="button" data-type="compact">경차</button>
-          <button type="button" data-type="ev">전기차</button>
+      <div class="field" id="cell-kind-field">
+        <label>무엇을 추가할까요?</label>
+        <div class="pill-group" id="cell-kind-group">
+          <button type="button" data-kind="cell">주차칸</button>
+          <button type="button" data-kind="road">통로</button>
+          <button type="button" data-kind="entrance">출입구</button>
         </div>
       </div>
-      <div class="field">
-        <label for="cell-zone">구역 이름</label>
-        <input class="input" id="cell-zone" list="zone-list" maxlength="12" autocomplete="off">
-        <datalist id="zone-list"></datalist>
+      <div id="cell-fields">
+        <div class="field">
+          <label>주차칸 종류</label>
+          <div class="pill-group" id="cell-type-group">
+            <button type="button" data-type="normal">일반</button>
+            <button type="button" data-type="compact">경차</button>
+            <button type="button" data-type="ev">전기차</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="cell-zone">구역 이름</label>
+          <input class="input" id="cell-zone" list="zone-list" maxlength="12" autocomplete="off">
+          <datalist id="zone-list"></datalist>
+        </div>
       </div>
       <div class="field" id="cell-tools">
         <label>이 칸 옆에 칸 추가 (다른 줄은 움직이지 않아요)</label>
@@ -871,14 +904,68 @@
           <button type="button" class="a-down" data-dir="down" aria-label="아래쪽에 추가">＋</button>
         </div>
         <div class="tool-row">
-          <button type="button" class="btn btn-ghost btn-sm" id="cell-move">↔ 이 줄 이동</button>
           <button type="button" class="btn btn-ghost btn-sm" id="cell-split">✂ 여기서 줄 나누기</button>
         </div>
+        <label class="tool-label">함께 옮길 줄·통로 선택 (선택한 것만 움직여요)</label>
+        <div class="tool-row">
+          <button type="button" class="btn btn-ghost btn-sm" id="cell-sel-strip">이 줄만 선택</button>
+        </div>
+        <div class="addpad selpad">
+          <button type="button" class="a-up" data-seldir="up" aria-label="위쪽 전부 선택">↑</button>
+          <button type="button" class="a-left" data-seldir="left" aria-label="왼쪽 전부 선택">←</button>
+          <span class="a-center">전부</span>
+          <button type="button" class="a-right" data-seldir="right" aria-label="오른쪽 전부 선택">→</button>
+          <button type="button" class="a-down" data-seldir="down" aria-label="아래쪽 전부 선택">↓</button>
+        </div>
+        <p class="sheet-hint">화살표 방향으로 이 칸 기준선 너머에 있는 줄·통로를 모두 선택해요.</p>
       </div>
       <div class="sheet-actions">
         <button class="btn btn-danger" id="cell-delete">삭제</button>
         <button class="btn btn-ghost" id="cell-cancel">취소</button>
         <button class="btn btn-primary" id="cell-ok">완료</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 통로/출입구 편집 시트 -->
+  <div id="area-sheet" class="modal-overlay sheet hidden">
+    <div class="modal-content">
+      <h3 id="area-sheet-title">통로/출입구 편집</h3>
+      <div class="field">
+        <label>종류</label>
+        <div class="pill-group" id="area-kind-group">
+          <button type="button" data-kind="road">통로</button>
+          <button type="button" data-kind="entrance">출입구</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="area-label">이름 (줄바꿈 가능)</label>
+        <textarea class="input" id="area-label" rows="2" maxlength="30"></textarea>
+      </div>
+      <div class="field">
+        <div class="tool-row">
+          <button type="button" class="btn btn-ghost btn-sm" id="area-range">▭ 범위 다시 지정</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="area-select">옮길 범위로 선택</button>
+        </div>
+        <p class="sheet-hint">범위 다시 지정: 지도에서 시작 칸과 끝 칸을 탭한 뒤 완료를 누르면 크기가 정해져요.</p>
+      </div>
+      <div class="sheet-actions">
+        <button class="btn btn-danger" id="area-delete">삭제</button>
+        <button class="btn btn-ghost" id="area-cancel">취소</button>
+        <button class="btn btn-primary" id="area-ok">완료</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 저장할 때 적용할 층 선택 -->
+  <div id="floor-apply-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3>어느 층에 적용할까요?</h3>
+      <div class="floor-apply-list" id="floor-apply-list"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost btn-sm" id="floor-apply-all">전체 선택</button>
+        <button class="btn btn-ghost" id="floor-apply-cancel">취소</button>
+        <button class="btn btn-primary" id="floor-apply-ok">저장</button>
       </div>
     </div>
   </div>
@@ -971,9 +1058,9 @@
       return finalizeLayout({
         strips,
         areas: [
-          { x: 2, y: 1, w: 4, h: 1, kind: 'road',     label: '내려가는<br>길' },
-          { x: 7, y: 1, w: 4, h: 1, kind: 'road',     label: '올라가는<br>길' },
-          { x: 1, y: 5, w: 5, h: 2, kind: 'entrance', label: '103동<br>출입구' },
+          { x: 2, y: 1, w: 4, h: 1, kind: 'road',     label: '내려가는\n길' },
+          { x: 7, y: 1, w: 4, h: 1, kind: 'road',     label: '올라가는\n길' },
+          { x: 1, y: 5, w: 5, h: 2, kind: 'entrance', label: '103동\n출입구' },
         ]
       });
     }
@@ -996,7 +1083,8 @@
     let draftFloor = null;
     let draftDirty = false;
     let sheetCtx = null;
-    let moveCtx = null;               // 이동 모드: { kind:'strip', stripId, step } | { kind:'area', index, step }
+    let sel = null;                   // 선택 모드: { strips:Set, areas:Set, step, hint } — 함께 옮길 줄·통로
+    let rangeCtx = null;              // 범위 지정 모드: { index|null, kind, label, p1, p2 }
     let editBounds = null;            // 편집 중 표시 범위 (한 번 넓어지면 유지)
     let backupsData = {};             // Firebase layoutBackups/{floor} — 직전 저장본
 
@@ -1080,7 +1168,7 @@
     function normalizeLayout(raw) {
       const areas = toArray(raw?.areas).map(a => ({
         x: Number(a.x) || 0, y: Number(a.y) || 0, w: Number(a.w) || 1, h: Number(a.h) || 1,
-        kind: a.kind || 'road', label: a.label || ''
+        kind: a.kind === 'entrance' ? 'entrance' : 'road', label: String(a.label || '').replace(/<br>/g, '\n')
       }));
       let strips = {};
       if (raw?.strips) {
@@ -1318,17 +1406,21 @@
       };
 
       const codes = (!mini) ? computeCodes(layout) : {};
-      const moveStripId = moveCtx && moveCtx.kind === 'strip' ? moveCtx.stripId : null;
+      const selActive = isEditView && sel;
 
       // 통로 / 출입구 영역
       layout.areas.forEach((a, ai) => {
         const el = document.createElement('div');
         el.className = `area area-${a.kind}`;
         place(el, a.x, a.y, a.w, a.h);
-        el.innerHTML = `<span class="area-label">${a.label || ''}</span>`;
-        if (moveCtx && moveCtx.kind === 'area' && moveCtx.index === ai) el.classList.add('moving');
-        else if (pendingPush && pendingPush.areaIdx.has(ai)) el.classList.add('push-preview');
-        if (isEditView) el.addEventListener('click', () => { if (!moveCtx) startMove({ kind: 'area', index: ai }); });
+        el.innerHTML = `<span class="area-label">${areaLabelHtml(a)}</span>`;
+        if (selActive && sel.areas.has(ai)) el.classList.add('sel-item');
+        if (selActive && sel.hint && sel.hint.areas.has(ai)) el.classList.add('blocker');
+        if (isEditView && rangeCtx && rangeCtx.index === ai) el.classList.add('ranging-old');
+        if (isEditView) el.addEventListener('click', () => {
+          if (rangeCtx) return;
+          if (sel) toggleSelArea(ai); else openAreaSheet(ai);
+        });
         cellsEl.appendChild(el);
       });
 
@@ -1355,8 +1447,8 @@
           if (cell.type === 'ev') inner += '<span class="type-badge">⚡</span>';
           if (used > 1) inner += `<span class="use-count">${used}회</span>`;
         }
-        if (moveStripId && cell.stripId === moveStripId) slotEl.classList.add('moving');
-        else if (pendingPush && pendingPush.stripIds.has(cell.stripId)) slotEl.classList.add('push-preview');
+        if (selActive && sel.strips.has(cell.stripId)) slotEl.classList.add('sel-item');
+        if (selActive && sel.hint && sel.hint.strips.has(cell.stripId)) slotEl.classList.add('blocker');
 
         // 주차된 차량 마커
         let parkedBy = null;
@@ -1380,7 +1472,8 @@
 
         if (interactive) {
           slotEl.addEventListener('click', () => {
-            if (moveCtx) return;
+            if (rangeCtx) return;
+            if (sel) { toggleSelStrip(cell.stripId); return; }
             if (editMode) openCellSheet(cell);
             else handleSlotClick(cell);
           });
@@ -1388,14 +1481,24 @@
         cellsEl.appendChild(slotEl);
       });
 
-      // 편집 중: 빈 곳(점)을 탭하면 그 칸 자리에 새 칸 추가 (점 격자에 맞춰 정렬)
+      // 범위 지정 미리보기
+      if (isEditView && rangeCtx && rangeCtx.p1) {
+        const r = rangeRect();
+        const pv = document.createElement('div');
+        pv.className = 'range-preview' + (rangeBlocked() ? ' bad' : '');
+        place(pv, r.x, r.y, r.w, r.h);
+        cellsEl.appendChild(pv);
+      }
+
+      // 편집 중: 빈 곳(점)을 탭 — 새 칸/통로 추가, 범위 지정 중에는 시작·끝 칸 지정 (점 격자에 맞춰 정렬)
       if (isEditView) {
         cellsEl.classList.add('edit-surface');
         cellsEl.addEventListener('click', (e) => {
-          if (e.target !== cellsEl || moveCtx) return;
+          if (e.target !== cellsEl || sel) return;
           const px = b.minX + e.offsetX / (cellsEl.clientWidth / W);
           const py = b.minY + e.offsetY / (cellsEl.clientHeight / H);
           const x = b.minX + Math.floor(px - b.minX), y = b.minY + Math.floor(py - b.minY);
+          if (rangeCtx) { handleRangeTap(x, y); return; }
           if (findBlocker(layout, [{ x, y, w: 1, h: 1 }])) return;   // 칸 사이 틈을 잘못 누른 경우 무시
           openCellSheet(null, x, y);
         });
@@ -1592,10 +1695,10 @@
       selectedFloor  = usersData[userName]?.floor || 'B2';
       selectedSlotId = null;
       mapView.scale = null; mapView.posX = 0; mapView.posY = 0;
-      editMode = false; draftLayout = null; moveCtx = null;
+      editMode = false; draftLayout = null; sel = null; rangeCtx = null;
 
       document.getElementById('main-screen').classList.add('hidden');
-      document.getElementById('detail-screen').classList.remove('hidden', 'editing', 'moving');
+      document.getElementById('detail-screen').classList.remove('hidden', 'editing', 'moving', 'ranging');
       document.getElementById('detail-title').textContent = `${userName}의 주차 등록`;
       window.scrollTo(0, 0);
 
@@ -1608,9 +1711,9 @@
     function goToMain() {
       currentUser    = null;
       selectedSlotId = null;
-      editMode = false; draftLayout = null; moveCtx = null;
+      editMode = false; draftLayout = null; sel = null; rangeCtx = null;
       document.getElementById('detail-screen').classList.add('hidden');
-      document.getElementById('detail-screen').classList.remove('editing', 'moving');
+      document.getElementById('detail-screen').classList.remove('editing', 'moving', 'ranging');
       document.getElementById('main-screen').classList.remove('hidden');
     }
 
@@ -1654,6 +1757,12 @@
       return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
     }
 
+    function setMode(mode) {   // mode: null | 'moving'(선택·이동) | 'ranging'(범위 지정)
+      const el = document.getElementById('detail-screen');
+      el.classList.toggle('moving', mode === 'moving');
+      el.classList.toggle('ranging', mode === 'ranging');
+    }
+
     // 편집 중 되돌리기 (편집 세션 동안 유지)
     let undoStack = [];
     function pushUndo() {
@@ -1663,10 +1772,10 @@
     function undoEdit() {
       if (!draftLayout) return;
       if (!undoStack.length) { showToast('되돌릴 작업이 없어요'); return; }
-      clearPendingPush();
       draftLayout = undoStack.pop();
       draftDirty = true;
-      validateMoveCtx();
+      pruneSelection();
+      if (rangeCtx) { updateRangeUI(); }
       renderDetailMap();
     }
 
@@ -1681,7 +1790,7 @@
       document.getElementById('detail-screen').classList.toggle('editing', on);
       if (on) {
         document.getElementById('edit-msg').innerHTML =
-          `<strong>${selectedFloor} 배치 편집 중</strong><br>칸·통로를 탭해 수정/이동하고, 빈 곳을 탭해 새 칸을 추가하세요. 한 줄을 옮겨도 다른 줄은 움직이지 않아요.`;
+          `<strong>${selectedFloor} 배치 편집 중</strong><br>칸·통로를 탭해 수정하고, 빈 곳을 탭해 새 칸·통로를 추가해요. 저장할 때 적용할 층을 고를 수 있어요.`;
       }
       updateRestoreBtn();
     }
@@ -1692,7 +1801,7 @@
       draftLayout = cloneLayout(getLayout(selectedFloor));
       draftDirty = false;
       undoStack = [];
-      moveCtx = null;
+      sel = null; rangeCtx = null; setMode(null);
       selectedSlotId = null;
       setEditUI(true);
       renderDetailMap();
@@ -1700,10 +1809,9 @@
     }
 
     function leaveEdit() {
-      clearPendingPush();
       draftLayout = null;
-      moveCtx = null;
-      document.getElementById('detail-screen').classList.remove('moving');
+      sel = null; rangeCtx = null; setMode(null);
+      closeAreaSheet();
       setEditUI(false);
     }
 
@@ -1716,7 +1824,7 @@
       refreshDetail();
     }
 
-    // ---- 줄 이동 ----
+    // ---- 공통 헬퍼 ----
     function isMobileView() { return window.innerWidth < 768; }
 
     // 화면 기준 방향 -> 좌표 변화 (모바일은 도면이 -90° 회전돼 있음)
@@ -1730,83 +1838,15 @@
       return a.x < b.x + b.w - e && b.x < a.x + a.w - e && a.y < b.y + b.h - e && b.y < a.y + a.h - e;
     }
 
-    // boxes 가 다른 칸/통로와 겹치면 그 이름을, 아니면 null
-    function findBlocker(L, boxes, ignoreStripId, ignoreArea) {
-      for (const c of Object.values(L.cells)) {
-        if (ignoreStripId && c.stripId === ignoreStripId) continue;
-        const cb = { x: c.x, y: c.y, w: 1, h: 1 };
-        if (boxes.some(b => boxesOverlap(b, cb))) return c.zone;
-      }
-      for (const a of L.areas) {
-        if (a === ignoreArea) continue;
-        if (boxes.some(b => boxesOverlap(b, a))) return (a.label || '통로').replace(/<br>/g, '');
-      }
-      return null;
+    function areaName(a) {
+      return (a.label || (a.kind === 'entrance' ? '출입구' : '통로')).replace(/\n/g, ' ');
     }
 
-    function validateMoveCtx() {
-      if (!moveCtx) return;
-      const ok = moveCtx.kind === 'strip' ? !!draftLayout?.strips[moveCtx.stripId] : !!draftLayout?.areas[moveCtx.index];
-      if (!ok) {
-        clearPendingPush();
-        moveCtx = null;
-        document.getElementById('detail-screen').classList.remove('moving');
-      } else {
-        updateMoveUI();
-      }
+    function areaLabelHtml(a) {
+      return esc(String(a.label || '').replace(/<br>/g, '\n')).replace(/\n/g, '<br>');
     }
 
-    // 함께 밀기 미리보기: { dx, dy, stripIds:Set, areaIdx:Set, names:[] }
-    let pendingPush = null;
-
-    function clearPendingPush() {
-      if (!pendingPush) return false;
-      pendingPush = null;
-      document.getElementById('detail-screen').classList.remove('push-pending');
-      return true;
-    }
-
-    function updateMoveUI() {
-      if (!moveCtx || !draftLayout) return;
-      let name;
-      if (moveCtx.kind === 'strip') {
-        const s = draftLayout.strips[moveCtx.stripId];
-        name = `${s.zone} 줄 (${s.slots.length}칸)`;
-      } else {
-        name = (draftLayout.areas[moveCtx.index].label || '통로').replace(/<br>/g, ' ');
-      }
-      const resizing = moveCtx.kind === 'area' && moveCtx.mode === 'resize';
-      const modeBtn = document.getElementById('move-mode');
-      modeBtn.style.display = moveCtx.kind === 'area' ? '' : 'none';
-      modeBtn.textContent = resizing ? '↔ 이동으로' : '⤢ 크기 조절';
-      document.getElementById('move-scope').textContent = `단위 ${moveCtx.step}칸`;
-      document.getElementById('move-msg').innerHTML = resizing
-        ? `<strong>${esc(name)} 크기 조절 중</strong><br>→/↓로 늘리고 ←/↑로 줄여요. (오른쪽·아래 끝이 움직여요)`
-        : `<strong>${esc(name)} 이동 중</strong><br>화살표로 옮겨요. 막히면 함께 밀 줄을 먼저 보여 드려요.`;
-      if (pendingPush) {
-        const names = [...new Set(pendingPush.names)];
-        document.getElementById('push-msg').innerHTML =
-          `<strong>${esc(names.slice(0, 3).join(', '))}${names.length > 3 ? ' 외' : ''}</strong>도 같이 ${moveCtx.step}칸 밀려요 (주황 표시)`;
-      }
-    }
-
-    function startMove(ctx) {
-      closeCellSheet();
-      clearPendingPush();
-      moveCtx = { ...ctx, step: 1, mode: 'move' };
-      document.getElementById('detail-screen').classList.add('moving');
-      updateMoveUI();
-      renderDetailMap();
-    }
-
-    function endMove() {
-      clearPendingPush();
-      moveCtx = null;
-      document.getElementById('detail-screen').classList.remove('moving');
-      renderDetailMap();
-    }
-
-    // 줄({strip}) 또는 영역({area})이 차지하는 칸 상자들 (dx, dy 만큼 옮긴 위치)
+    // 줄({strip}) 또는 영역({area: 인덱스})이 차지하는 상자들 (dx, dy 만큼 옮긴 위치)
     function itemBoxes(L, item, dx = 0, dy = 0) {
       if (item.strip) {
         const s = L.strips[item.strip];
@@ -1820,89 +1860,260 @@
       return [{ x: a.x + dx, y: a.y + dy, w: a.w, h: a.h }];
     }
 
-    // 옮길 대상 + 가는 길을 막는 줄/영역(연쇄)을 모음. 막는 것만 통째로 같이 움직이고 나머지는 그대로
-    function computePush(L, start, dx, dy) {
-      const stripIds = new Set(), areaIdx = new Set(), names = [];
-      if (start.strip) stripIds.add(start.strip); else areaIdx.add(start.area);
-      const queue = [start];
-      while (queue.length) {
-        const boxes = itemBoxes(L, queue.shift(), dx, dy);
-        Object.values(L.strips).forEach(s => {
-          if (stripIds.has(s.id)) return;
-          if (itemBoxes(L, { strip: s.id }).some(sb => boxes.some(b => boxesOverlap(b, sb)))) {
-            stripIds.add(s.id); names.push(s.zone); queue.push({ strip: s.id });
-          }
-        });
-        L.areas.forEach((a, i) => {
-          if (areaIdx.has(i)) return;
-          if (boxes.some(b => boxesOverlap(b, a))) {
-            areaIdx.add(i); names.push((a.label || '통로').replace(/<br>/g, '')); queue.push({ area: i });
-          }
-        });
-      }
-      return { dx, dy, stripIds, areaIdx, names };
+    // boxes 와 겹치는 줄/영역 (ignore: {strips:Set, areas:Set} 은 제외)
+    function findBlockers(L, boxes, ignore = {}) {
+      const out = { strips: new Set(), areas: new Set(), names: [] };
+      Object.values(L.cells).forEach(c => {
+        if ((ignore.strips && ignore.strips.has(c.stripId)) || out.strips.has(c.stripId)) return;
+        const cb = { x: c.x, y: c.y, w: 1, h: 1 };
+        if (boxes.some(b => boxesOverlap(b, cb))) { out.strips.add(c.stripId); out.names.push(c.zone); }
+      });
+      L.areas.forEach((a, i) => {
+        if (ignore.areas && ignore.areas.has(i)) return;
+        if (boxes.some(b => boxesOverlap(b, a))) { out.areas.add(i); out.names.push(areaName(a)); }
+      });
+      return out;
+    }
+    function findBlocker(L, boxes, ignore) {
+      return findBlockers(L, boxes, ignore).names[0] || null;
     }
 
-    function applyPush(plan) {
-      pushUndo();
-      plan.stripIds.forEach(id => { const s = draftLayout.strips[id]; s.x += plan.dx; s.y += plan.dy; });
-      plan.areaIdx.forEach(i => { const a = draftLayout.areas[i]; a.x += plan.dx; a.y += plan.dy; });
-      finalizeLayout(draftLayout);
-      draftDirty = true;
-      clearPendingPush();
-      updateMoveUI();
+    // ============================================
+    // 선택 모드: 함께 옮길 줄·통로를 직접 골라서 한꺼번에 이동
+    //   (자동으로 밀지 않음 — 선택하지 않은 것은 절대 움직이지 않는다)
+    // ============================================
+    function startSelect(stripIds = [], areaIdx = []) {
+      closeCellSheet(); closeAreaSheet();
+      rangeCtx = null;
+      sel = { strips: new Set(stripIds), areas: new Set(areaIdx), step: 1, hint: null };
+      setMode('moving');
+      updateSelUI();
       renderDetailMap();
     }
 
-    function confirmPush() { if (pendingPush) applyPush(pendingPush); }
-    function cancelPush() { if (clearPendingPush()) { updateMoveUI(); renderDetailMap(); } }
+    function endSelect() {
+      sel = null;
+      setMode(null);
+      renderDetailMap();
+    }
 
-    function moveBy(dir) {
-      if (!moveCtx || !draftLayout) return;
-      clearPendingPush();
-      if (moveCtx.kind === 'area' && moveCtx.mode === 'resize') { resizeArea(dir); return; }
+    function pruneSelection() {
+      if (!sel || !draftLayout) return;
+      sel.strips = new Set([...sel.strips].filter(id => draftLayout.strips[id]));
+      sel.areas = new Set([...sel.areas].filter(i => draftLayout.areas[i]));
+      sel.hint = null;
+      updateSelUI();
+    }
+
+    function updateSelUI() {
+      if (!sel) return;
+      document.getElementById('move-msg').innerHTML =
+        `<strong>줄 ${sel.strips.size}개 · 통로/출입구 ${sel.areas.size}개 선택됨</strong><br>지도에서 탭해 선택/해제하고, 화살표로 한꺼번에 옮겨요.`;
+      document.getElementById('move-scope').textContent = `단위 ${sel.step}칸`;
+      const none = !sel.strips.size && !sel.areas.size;
+      document.querySelectorAll('.dpad button').forEach(b => { b.disabled = none; });
+    }
+
+    function toggleSelStrip(id) {
+      sel.hint = null;
+      if (!sel.strips.delete(id)) sel.strips.add(id);
+      updateSelUI(); renderDetailMap();
+    }
+    function toggleSelArea(i) {
+      sel.hint = null;
+      if (!sel.areas.delete(i)) sel.areas.add(i);
+      updateSelUI(); renderDetailMap();
+    }
+
+    function moveSelection(dir) {
+      if (!sel || !draftLayout) return;
+      sel.hint = null;
+      if (!sel.strips.size && !sel.areas.size) { showToast('옮길 줄이나 통로를 먼저 선택하세요'); return; }
       const [ux, uy] = dirDelta(dir);
-      const dx = ux * moveCtx.step, dy = uy * moveCtx.step;
+      const dx = ux * sel.step, dy = uy * sel.step;
       const L = draftLayout;
-      const start = moveCtx.kind === 'strip' ? { strip: moveCtx.stripId } : { area: moveCtx.index };
-      if (start.strip ? !L.strips[start.strip] : !L.areas[start.area]) return;
 
-      const plan = computePush(L, start, dx, dy);
-      if (plan.names.length) {
-        // 막는 것이 있으면 바로 옮기지 않고 함께 밀 대상을 보여 준 뒤 확인을 받음
-        pendingPush = plan;
-        document.getElementById('detail-screen').classList.add('push-pending');
-        updateMoveUI();
+      const moved = [];
+      sel.strips.forEach(id => moved.push(...itemBoxes(L, { strip: id }, dx, dy)));
+      sel.areas.forEach(i => moved.push(...itemBoxes(L, { area: i }, dx, dy)));
+      const hit = findBlockers(L, moved, { strips: sel.strips, areas: sel.areas });
+      if (hit.names.length) {                                  // 선택하지 않은 것에 막힘: 표시만 하고 옮기지 않음
+        sel.hint = hit;
+        showToast(`'${[...new Set(hit.names)].slice(0, 3).join(', ')}'에 막혀요. 같이 옮기려면 지도에서 탭해 선택하세요`);
         renderDetailMap();
         return;
       }
-      applyPush(plan);
-    }
 
-    // 영역 크기 조절: 화면 기준 오른쪽 끝(→ 늘림 / ← 줄임), 아래쪽 끝(↓ 늘림 / ↑ 줄임)
-    function resizeArea(dir) {
-      const L = draftLayout;
-      const a = L.areas[moveCtx.index];
-      if (!a) return;
-      const grow = dir === 'right' || dir === 'down';
-      const [ex, ey] = dirDelta(dir === 'right' || dir === 'left' ? 'right' : 'down');   // 움직이는 끝의 도면 방향
-      const d = grow ? moveCtx.step : -moveCtx.step;
-      const n = { x: a.x, y: a.y, w: a.w, h: a.h };
-      if (ex > 0) n.w += d; else if (ex < 0) { n.x -= d; n.w += d; }
-      if (ey > 0) n.h += d; else if (ey < 0) { n.y -= d; n.h += d; }
-      if (n.w < 0.5 || n.h < 0.5) { showToast('더 줄일 수 없어요'); return; }
-      if (grow) {
-        const blocker = findBlocker(L, [n], null, a);
-        if (blocker) { showToast(`'${blocker}'와 겹쳐서 늘릴 수 없어요`); return; }
-      }
       pushUndo();
-      Object.assign(a, n);
+      sel.strips.forEach(id => { const s = L.strips[id]; s.x += dx; s.y += dy; });
+      sel.areas.forEach(i => { const a = L.areas[i]; a.x += dx; a.y += dy; });
       finalizeLayout(L);
       draftDirty = true;
       renderDetailMap();
     }
 
-    // ---- 저장 / 복구 ----
+    // 탭한 칸을 기준으로 화면 기준 그 방향에 있는 줄·통로를 모두 선택
+    function selectBeyondFromSheet(dir) {
+      if (!sheetCtx || sheetCtx.mode !== 'edit') return;
+      if (!commitEditFields()) return;
+      const L = draftLayout;
+      const cell = L.cells[sheetCtx.id];
+      const [dx, dy] = dirDelta(dir);
+      const e = 1e-6;
+      const inside = b =>
+        dx > 0 ? b.x >= cell.x - e :
+        dx < 0 ? b.x + b.w <= cell.x + 1 + e :
+        dy > 0 ? b.y >= cell.y - e :
+                 b.y + b.h <= cell.y + 1 + e;
+      const strips = Object.values(L.strips).filter(s => itemBoxes(L, { strip: s.id }).every(inside)).map(s => s.id);
+      const areas = L.areas.map((_, i) => i).filter(i => itemBoxes(L, { area: i }).every(inside));
+      const own = strips.includes(cell.stripId);
+      startSelect(strips, areas);
+      if (!own) showToast('탭한 칸의 줄이 기준선에 걸쳐 있어 제외했어요. 필요하면 ✂ 줄 나누기를 먼저 하세요');
+    }
+
+    function selectStripFromSheet() {
+      if (!sheetCtx || sheetCtx.mode !== 'edit') return;
+      if (!commitEditFields()) return;
+      startSelect([draftLayout.cells[sheetCtx.id].stripId], []);
+    }
+
+    // ============================================
+    // 범위 지정 모드: 지도에서 시작 칸 → 끝 칸을 탭해 통로/출입구 범위를 정하고 완료로 확정
+    // ============================================
+    function startRange(ctx) {
+      closeCellSheet(); closeAreaSheet();
+      sel = null;
+      rangeCtx = { index: ctx.index ?? null, kind: ctx.kind, label: ctx.label, p1: ctx.p1 || null, p2: null };
+      setMode('ranging');
+      updateRangeUI();
+      renderDetailMap();
+    }
+
+    function rangeRect() {
+      if (!rangeCtx || !rangeCtx.p1) return null;
+      const a = rangeCtx.p1, b = rangeCtx.p2 || rangeCtx.p1;
+      return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x) + 1, h: Math.abs(a.y - b.y) + 1 };
+    }
+
+    function rangeBlocked() {
+      const r = rangeRect();
+      if (!r) return true;
+      const ignore = { areas: new Set(rangeCtx.index !== null ? [rangeCtx.index] : []) };
+      return !!findBlocker(draftLayout, [r], ignore);
+    }
+
+    function updateRangeUI() {
+      if (!rangeCtx) return;
+      const name = rangeCtx.kind === 'entrance' ? '출입구' : '통로';
+      const r = rangeRect();
+      let msg;
+      if (!rangeCtx.p1) msg = `<strong>${name} 범위 지정</strong><br>① 시작 칸을 탭하세요`;
+      else if (!rangeCtx.p2) msg = `<strong>${name} 범위 지정</strong><br>② 끝 칸을 탭하세요 (한 칸이면 바로 완료)`;
+      else msg = `<strong>${name} 범위 지정</strong><br>${r.w * r.h}칸 크기예요. 맞으면 완료를 누르세요.`;
+      const blocked = !!r && rangeBlocked();
+      if (blocked) msg += '<br><span class="range-warn">주차칸이나 다른 통로와 겹쳐요</span>';
+      document.getElementById('range-msg').innerHTML = msg;
+      document.getElementById('range-ok').disabled = !r || blocked;
+    }
+
+    function handleRangeTap(x, y) {
+      if (!rangeCtx) return;
+      if (!rangeCtx.p1) rangeCtx.p1 = { x, y }; else rangeCtx.p2 = { x, y };
+      updateRangeUI();
+      renderDetailMap();
+    }
+
+    function resetRange() {
+      if (!rangeCtx) return;
+      rangeCtx.p1 = null; rangeCtx.p2 = null;
+      updateRangeUI();
+      renderDetailMap();
+    }
+
+    function finishRange() {
+      const r = rangeRect();
+      if (!rangeCtx || !r || rangeBlocked()) return;
+      pushUndo();
+      if (rangeCtx.index !== null) Object.assign(draftLayout.areas[rangeCtx.index], r, { kind: rangeCtx.kind, label: rangeCtx.label });
+      else draftLayout.areas.push({ ...r, kind: rangeCtx.kind, label: rangeCtx.label });
+      draftDirty = true;
+      cancelRange();
+    }
+
+    function cancelRange() {
+      rangeCtx = null;
+      setMode(null);
+      renderDetailMap();
+    }
+
+    // ============================================
+    // 통로/출입구 시트
+    // ============================================
+    let areaCtx = null;     // { index, kind }
+
+    function setAreaKind(kind) {
+      areaCtx.kind = kind;
+      document.querySelectorAll('#area-kind-group button').forEach(b => b.classList.toggle('active', b.dataset.kind === kind));
+    }
+
+    function openAreaSheet(index) {
+      const a = draftLayout.areas[index];
+      areaCtx = { index, kind: a.kind };
+      document.getElementById('area-sheet-title').textContent = `${areaName(a)} 편집`;
+      document.getElementById('area-label').value = String(a.label || '').replace(/<br>/g, '\n');
+      setAreaKind(a.kind);
+      document.getElementById('area-sheet').classList.remove('hidden');
+    }
+
+    function closeAreaSheet() {
+      document.getElementById('area-sheet').classList.add('hidden');
+      areaCtx = null;
+    }
+
+    // 시트의 종류/이름을 draft에 반영
+    function commitAreaFields() {
+      const a = draftLayout.areas[areaCtx.index];
+      const label = document.getElementById('area-label').value.replace(/\r/g, '').trim() || (areaCtx.kind === 'entrance' ? '출입구' : '통로');
+      if (a.kind === areaCtx.kind && a.label === label) return;
+      pushUndo();
+      a.kind = areaCtx.kind;
+      a.label = label;
+      draftDirty = true;
+    }
+
+    function applyAreaSheet() {
+      if (!areaCtx) return;
+      commitAreaFields();
+      closeAreaSheet();
+      renderDetailMap();
+    }
+
+    function rangeFromAreaSheet() {
+      if (!areaCtx) return;
+      commitAreaFields();
+      const a = draftLayout.areas[areaCtx.index];
+      startRange({ index: areaCtx.index, kind: a.kind, label: a.label });
+    }
+
+    function selectAreaFromSheet() {
+      if (!areaCtx) return;
+      commitAreaFields();
+      startSelect([], [areaCtx.index]);
+    }
+
+    function deleteAreaFromSheet() {
+      if (!areaCtx) return;
+      pushUndo();
+      draftLayout.areas.splice(areaCtx.index, 1);
+      draftDirty = true;
+      closeAreaSheet();
+      renderDetailMap();
+    }
+
+    // ============================================
+    // 저장 / 복구 (저장할 때 적용할 층을 고른다)
+    // ============================================
     function serializeLayout(L) {
       const strips = {};
       Object.values(L.strips).forEach(s => {
@@ -1917,23 +2128,86 @@
       };
     }
 
+    // 어느 층에 적용할지 묻는 창. 선택한 층 배열 / 취소하면 null
+    function pickApplyFloors() {
+      return new Promise(resolve => {
+        const modal = document.getElementById('floor-apply-modal');
+        const list = document.getElementById('floor-apply-list');
+        list.innerHTML = '';
+        const newIds = new Set(Object.keys(draftLayout.cells));
+        const boxes = [];
+
+        FLOORS.forEach(f => {
+          const row = document.createElement('label');
+          row.className = 'floor-row';
+          const cb = document.createElement('input');
+          cb.type = 'checkbox'; cb.value = f;
+          let note;
+          if (f === draftFloor) {
+            cb.checked = true; cb.disabled = true;
+            note = '지금 편집한 층 (항상 저장)';
+          } else {
+            // 그 층에 주차된 차의 칸이 새 배치에 없으면 적용하지 않음 (등록 기록이 어긋나므로)
+            const lost = USERS.filter(u => {
+              const r = usersData[u], id = r && r.floor === f ? recSlotId(r) : null;
+              return id && !newIds.has(id);
+            });
+            if (lost.length) { cb.disabled = true; note = `${lost.join(', ')} 차가 있는 칸이 새 배치에 없어 적용할 수 없어요`; }
+            else note = layoutsData[f] ? '수정해 둔 배치를 이 배치로 바꿔요' : '기본 배치를 이 배치로 바꿔요';
+          }
+          row.innerHTML = `<span class="floor-name">${esc(f)}</span><span class="floor-note">${esc(note)}</span>`;
+          row.prepend(cb);
+          list.appendChild(row);
+          boxes.push(cb);
+        });
+
+        const okBtn = document.getElementById('floor-apply-ok');
+        const cancelBtn = document.getElementById('floor-apply-cancel');
+        const allBtn = document.getElementById('floor-apply-all');
+        modal.classList.remove('hidden');
+
+        const done = (val) => {
+          modal.classList.add('hidden');
+          okBtn.removeEventListener('click', onOk);
+          cancelBtn.removeEventListener('click', onCancel);
+          allBtn.removeEventListener('click', onAll);
+          modal.removeEventListener('click', onBg);
+          resolve(val);
+        };
+        const onOk = () => done(boxes.filter(b => b.checked).map(b => b.value));
+        const onCancel = () => done(null);
+        const onAll = () => { boxes.forEach(b => { if (!b.disabled) b.checked = true; }); };
+        const onBg = (e) => { if (e.target === modal) done(null); };
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        allBtn.addEventListener('click', onAll);
+        modal.addEventListener('click', onBg);
+      });
+    }
+
     async function saveEdit() {
       if (!db || !draftLayout) return;
+      const targets = await pickApplyFloors();
+      if (!targets) return;
       const data = serializeLayout(draftLayout);
       try {
-        const prev = layoutsData[draftFloor];
-        if (prev) {
-          // 직전 저장본 보관 (실패해도 저장은 계속)
-          try { await set(ref(db, `layoutBackups/${draftFloor}`), prev); }
-          catch (e) { console.warn('이전 저장본 보관 실패:', e); }
+        const stamp = new Date().toISOString();
+        const updates = {};
+        for (const f of targets) {
+          const prev = layoutsData[f];
+          if (prev) {
+            // 덮어쓰기 전 직전 저장본 보관 (실패해도 저장은 계속)
+            try { await set(ref(db, `layoutBackups/${f}`), prev); backupsData[f] = prev; }
+            catch (e) { console.warn('이전 저장본 보관 실패:', e); }
+          }
+          updates[`layouts/${f}`] = { ...data, updatedAt: stamp };
         }
-        await set(ref(db, `layouts/${draftFloor}`), { ...data, updatedAt: new Date().toISOString() });
-        layoutsData[draftFloor] = data;
-        if (prev) backupsData[draftFloor] = prev;
+        await update(ref(db), updates);          // 선택한 층을 한 번에 저장
+        targets.forEach(f => { layoutsData[f] = data; });
         leaveEdit();
         renderFloorTabs();
         refreshDetail();
-        showToast('✅ 배치가 저장되었습니다');
+        showToast(targets.length > 1 ? `✅ ${targets.length}개 층에 배치가 저장되었습니다` : '✅ 배치가 저장되었습니다');
       } catch (err) {
         console.error('배치 저장 실패:', err);
         showToast('❌ 저장에 실패했습니다. 다시 시도해 주세요');
@@ -1946,7 +2220,7 @@
       pushUndo();
       draftLayout = buildDefaultLayout();
       draftDirty = true;
-      validateMoveCtx();
+      sel = null; rangeCtx = null; setMode(null);
       renderDetailMap();
     }
 
@@ -1958,11 +2232,13 @@
       pushUndo();
       draftLayout = normalizeLayout(raw);
       draftDirty = true;
-      validateMoveCtx();
+      sel = null; rangeCtx = null; setMode(null);
       renderDetailMap();
     }
 
-    // --- 칸 편집 시트 ---
+    // ============================================
+    // 칸 편집 시트
+    // ============================================
     // 내부용 번호 (화면에는 칸 코드가 표시됨) — 같은 구역 이름 안에서 겹치지 않게만 부여
     function nextNoFor(zone, exceptStripId) {
       let max = 0;
@@ -1977,6 +2253,13 @@
       document.querySelectorAll('#cell-type-group button').forEach(b => b.classList.toggle('active', b.dataset.type === type));
     }
 
+    // 새로 추가할 것의 종류: 주차칸 / 통로 / 출입구
+    function setSheetKind(kind) {
+      sheetCtx.kind = kind;
+      document.querySelectorAll('#cell-kind-group button').forEach(b => b.classList.toggle('active', b.dataset.kind === kind));
+      document.getElementById('cell-fields').style.display = kind === 'cell' ? '' : 'none';
+    }
+
     function openCellSheet(cell, x, y) {
       const zoneInput = document.getElementById('cell-zone');
       const dl = document.getElementById('zone-list');
@@ -1986,11 +2269,12 @@
       });
 
       if (cell) {
-        sheetCtx = { mode: 'edit', id: cell.id, type: cell.type };
+        sheetCtx = { mode: 'edit', id: cell.id, type: cell.type, kind: 'cell' };
         const code = computeCodes(draftLayout)[cell.id];
         document.getElementById('cell-sheet-title').textContent = `${code ? code + ' · ' : ''}${cell.zone} 칸 수정`;
         zoneInput.value = cell.zone;
         document.getElementById('addpad-center').textContent = code || '이 칸';
+        document.getElementById('cell-fields').style.display = '';
       } else {
         // 가까운 칸의 구역을 기본값으로
         let near = null, best = 1.6;
@@ -1998,13 +2282,15 @@
           const d = Math.hypot(c.x - x, c.y - y);
           if (d < best) { best = d; near = c; }
         });
-        sheetCtx = { mode: 'add', x, y, type: near ? near.type : 'normal' };
-        document.getElementById('cell-sheet-title').textContent = '여기에 새 칸 추가';
+        sheetCtx = { mode: 'add', x, y, type: near ? near.type : 'normal', kind: 'cell' };
+        document.getElementById('cell-sheet-title').textContent = '여기에 추가';
         zoneInput.value = near ? near.zone : '';
+        setSheetKind('cell');
       }
       setSheetType(sheetCtx.type);
       document.getElementById('cell-delete').style.display = cell ? '' : 'none';
       document.getElementById('cell-tools').style.display = cell ? '' : 'none';
+      document.getElementById('cell-kind-field').style.display = cell ? 'none' : '';
       document.getElementById('cell-sheet').classList.remove('hidden');
     }
 
@@ -2037,6 +2323,10 @@
     function applyCellSheet() {
       if (!sheetCtx) return;
       if (sheetCtx.mode === 'add') {
+        if (sheetCtx.kind !== 'cell') {              // 통로/출입구: 탭한 칸을 시작점으로 범위 지정 시작
+          startRange({ kind: sheetCtx.kind, label: sheetCtx.kind === 'entrance' ? '출입구' : '통로', p1: { x: sheetCtx.x, y: sheetCtx.y } });
+          return;
+        }
         const zone = document.getElementById('cell-zone').value.trim();
         if (!zone) { showToast('구역 이름을 입력해 주세요'); return; }
         const blocker = findBlocker(draftLayout, [{ x: sheetCtx.x, y: sheetCtx.y, w: 1, h: 1 }]);
@@ -2090,7 +2380,7 @@
       renderDetailMap();
     }
 
-    // 이 칸부터 뒤쪽을 새 줄로 분리하고 바로 이동 모드로 — 줄 중간에 통로를 낼 때
+    // 이 칸부터 뒤쪽을 새 줄로 분리하고 그 줄을 선택한 채 선택 모드로 — 줄 중간에 통로를 낼 때
     function splitStripHere() {
       if (!sheetCtx || sheetCtx.mode !== 'edit') return;
       if (!commitEditFields()) return;
@@ -2104,15 +2394,8 @@
       L.strips[ns.id] = ns;
       finalizeLayout(L);
       draftDirty = true;
-      startMove({ kind: 'strip', stripId: ns.id });
+      startSelect([ns.id], []);
       showToast('여기서부터 새 줄로 나뉘었어요. 화살표로 옮겨 통로를 만드세요');
-    }
-
-    function moveStripFromSheet() {
-      if (!sheetCtx || sheetCtx.mode !== 'edit') return;
-      if (!commitEditFields()) return;
-      const cell = draftLayout.cells[sheetCtx.id];
-      startMove({ kind: 'strip', stripId: cell.stripId });
     }
 
     function deleteCellFromSheet() {
@@ -2271,31 +2554,42 @@
     document.querySelectorAll('#cell-type-group button').forEach(b => {
       b.addEventListener('click', () => setSheetType(b.dataset.type));
     });
-    document.getElementById('cell-move').addEventListener('click', moveStripFromSheet);
     document.getElementById('cell-split').addEventListener('click', splitStripHere);
-    document.querySelectorAll('.addpad button').forEach(b => {
+    document.getElementById('cell-sel-strip').addEventListener('click', selectStripFromSheet);
+    document.querySelectorAll('.addpad:not(.selpad) button').forEach(b => {
       b.addEventListener('click', () => addCellBeside(b.dataset.dir));
     });
+    document.querySelectorAll('.selpad button').forEach(b => {
+      b.addEventListener('click', () => selectBeyondFromSheet(b.dataset.seldir));
+    });
+    document.querySelectorAll('#cell-kind-group button').forEach(b => {
+      b.addEventListener('click', () => { if (sheetCtx) setSheetKind(b.dataset.kind); });
+    });
+    document.querySelectorAll('#area-kind-group button').forEach(b => {
+      b.addEventListener('click', () => { if (areaCtx) setAreaKind(b.dataset.kind); });
+    });
+    document.getElementById('area-range').addEventListener('click', rangeFromAreaSheet);
+    document.getElementById('area-select').addEventListener('click', selectAreaFromSheet);
+    document.getElementById('area-delete').addEventListener('click', deleteAreaFromSheet);
+    document.getElementById('area-cancel').addEventListener('click', closeAreaSheet);
+    document.getElementById('area-ok').addEventListener('click', applyAreaSheet);
+    document.getElementById('area-sheet').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeAreaSheet(); });
+    document.getElementById('range-ok').addEventListener('click', finishRange);
+    document.getElementById('range-redo').addEventListener('click', resetRange);
+    document.getElementById('range-cancel').addEventListener('click', cancelRange);
     document.getElementById('edit-undo').addEventListener('click', undoEdit);
     document.getElementById('edit-restore').addEventListener('click', restoreBackup);
     document.querySelectorAll('.dpad button').forEach(b => {
-      b.addEventListener('click', () => moveBy(b.dataset.dir));
+      b.addEventListener('click', () => moveSelection(b.dataset.dir));
     });
     document.getElementById('move-scope').addEventListener('click', () => {
-      if (!moveCtx) return;
-      moveCtx.step = moveCtx.step === 1 ? 0.5 : 1;
-      cancelPush();
-      updateMoveUI();
+      if (!sel) return;
+      sel.step = sel.step === 1 ? 0.5 : 1;
+      sel.hint = null;
+      updateSelUI();
+      renderDetailMap();
     });
-    document.getElementById('move-mode').addEventListener('click', () => {
-      if (!moveCtx || moveCtx.kind !== 'area') return;
-      moveCtx.mode = moveCtx.mode === 'resize' ? 'move' : 'resize';
-      cancelPush();
-      updateMoveUI();
-    });
-    document.getElementById('push-ok').addEventListener('click', confirmPush);
-    document.getElementById('push-cancel').addEventListener('click', cancelPush);
-    document.getElementById('move-done').addEventListener('click', endMove);
+    document.getElementById('move-done').addEventListener('click', endSelect);
     document.getElementById('move-undo').addEventListener('click', undoEdit);
     document.getElementById('cell-ok').addEventListener('click', applyCellSheet);
     document.getElementById('cell-cancel').addEventListener('click', closeCellSheet);
