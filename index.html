@@ -242,6 +242,7 @@
     }
     .detail-header h2 { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; text-align: center; }
     .detail-header .back-btn { justify-self: start; }
+    .bottom-back { display: none; }   /* 휴대폰에서만 하단 등록 바에 표시 */
     .detail-header .edit-btn { justify-self: end; }
     #detail-screen.editing .edit-btn { visibility: hidden; }
 
@@ -690,7 +691,13 @@
         position: relative; z-index: 20;
         margin: 0; gap: 0; width: 100%;
       }
-      #detail-screen.editing .right-panel { display: none; }
+      /* 뒤로가기는 엄지가 닿는 하단으로 (상단 버튼은 자리만 남겨 제목 가운데 정렬 유지) */
+      .detail-header .back-btn { visibility: hidden; }
+      .bottom-back { display: inline-flex; flex-shrink: 0; height: 46px; padding: 0 14px; font-size: 15px; }
+      /* 편집 중에도 하단 바는 남기고 뒤로가기만 표시 */
+      #detail-screen.editing .right-panel { display: flex; }
+      #detail-screen.editing .selection-info, #detail-screen.editing .register-btn { display: none; }
+      #detail-screen.editing .bottom-back { flex: 1; }
       .legend-section { display: none; }
       .register-section {
         flex-direction: row; align-items: center; gap: 10px;
@@ -701,7 +708,7 @@
       .selection-info { flex: 1; min-width: 0; padding: 6px 10px; font-size: 12px; text-align: left; }
       .selection-info strong { font-size: 14px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .selection-info .swap-note { font-size: 11px; margin-top: 2px; }
-      .register-btn { width: auto; min-width: 120px; flex-shrink: 0; height: 46px; font-size: 15px; padding: 0 16px; }
+      .register-btn { width: auto; min-width: 108px; flex-shrink: 0; height: 46px; font-size: 15px; padding: 0 14px; }
 
       #toast { bottom: 90px; }
 
@@ -820,6 +827,7 @@
 
       <div class="right-panel">
         <div class="register-section">
+          <button class="btn btn-ghost bottom-back" id="back-btn-bottom">← 뒤로</button>
           <div class="selection-info" id="selection-info">칸을 선택해 주세요</div>
           <button class="register-btn" id="register-btn" disabled>등록하기</button>
         </div>
@@ -2542,6 +2550,7 @@
     document.getElementById('card-chami').addEventListener('click',  () => goToDetail('차미'));
     document.getElementById('settings-btn').addEventListener('click', (e) => { e.stopPropagation(); openIconModal(); });
     document.getElementById('back-btn').addEventListener('click', handleBack);
+    document.getElementById('back-btn-bottom').addEventListener('click', handleBack);
     document.getElementById('register-btn').addEventListener('click', handleRegister);
     document.getElementById('modal-close-btn').addEventListener('click', closeIconModal);
     document.getElementById('icon-modal').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeIconModal(); });
